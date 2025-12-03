@@ -1,0 +1,11 @@
+default-xircuitb:
+  slidingWindowSize: ${CB_SLIDING_WINDOW_SIZE:100}
+  minNumberOfCalls: ${CB_MIN_NUM_CALLS:10}
+  failureRateThreshold: ${CB_FAILURE_RATE_THRESHOLD:50}
+  waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN_STATE:5000}
+  numCallHalfOpen: ${CB_NUM_CALL_HALF_OPEN:10}
+  exceptionsToCatch: ${CB_EXCEPTIONS_TO_CATCH:java.lang.Exception}
+  slidingWindowType: ${CB_SLIDING_WINDOW_TYPE:COUNT_BASED}
+  activeFrom: ${CB_ACTIVE_FROM:00:00}
+  activeTo: ${CB_ACTIVE_TO:23:59}
+  activeDays: ${CB_ACTIVE_DAYS:}

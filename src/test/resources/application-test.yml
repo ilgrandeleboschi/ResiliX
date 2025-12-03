@@ -1,0 +1,11 @@
+default-xircuitb:
+  slidingWindowSize: 10
+  minNumberOfCalls: 1
+  failureRateThreshold: 20
+  waitDurationInOpenState: 1000
+  numCallHalfOpen: 1
+  exceptionsToCatch: java.lang.Exception
+  slidingWindowType: COUNT_BASED
+  activeFrom: "00:00"
+  activeTo: "23:59"
+  activeDays:
