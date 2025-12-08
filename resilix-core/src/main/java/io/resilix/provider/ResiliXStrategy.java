@@ -7,8 +7,4 @@ public interface ResiliXStrategy {
 
     CheckedSupplier<Object> apply(CheckedSupplier<Object> execution);
 
-    default String name() {
-        return this.getClass().getSimpleName();
-    }
-
 }
