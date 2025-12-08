@@ -1,0 +1,3 @@
+resilix:
+  xircuitb:
+    priority: ${XIRCUITB_PRIORITY:1}
