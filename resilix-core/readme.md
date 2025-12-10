@@ -9,9 +9,9 @@ module handles specific resilience concerns so you can focus on your business lo
 
 ## Modules
 
-- [ResiliX-core](https://github.com/ilgrandeleboschi/ResiliX/tree/main/ResiliX-core) - Core jar, the dependency of every
+- [ResiliX-core](https://github.com/ilgrandeleboschi/ResiliX/tree/main/resilix-core) - Core jar, the dependency of every
   modules
-- [XircuitB](https://github.com/ilgrandeleboschi/ResiliX/tree/main/XircuitB) – Circuit Breaker module
+- [XircuitB](https://github.com/ilgrandeleboschi/ResiliX/tree/main/xircuitb) – Circuit Breaker module
 
 ---
 
