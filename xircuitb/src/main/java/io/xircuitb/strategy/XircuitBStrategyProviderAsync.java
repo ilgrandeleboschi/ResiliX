@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -46,15 +47,15 @@ public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider impl
     }
 
     private Supplier<CompletionStage<Object>> wrapAsync(CircuitBreaker cb, Supplier<CompletionStage<Object>> supplier, XircuitBFallbackProviderAsync fallbackProvider) {
-        return () -> {
-            try {
-                return cb.executeCompletionStage(supplier);
-            } catch (CallNotPermittedException e) {
-                if (fallbackProvider != null)
-                    return fallbackProvider.returnFallbackModel(cb.getName(), fallbackProvider.apply(e), e);
-                throw e;
-            }
-        };
+        return () -> cb.executeCompletionStage(supplier)
+                .exceptionallyCompose(ex -> {
+                    if (ex instanceof CallNotPermittedException e && fallbackProvider != null) {
+                        return fallbackProvider.returnFallbackModel(cb.getName(), fallbackProvider.apply(e), e);
+                    }
+                    CompletableFuture<Object> failed = new CompletableFuture<>();
+                    failed.completeExceptionally(ex);
+                    return failed;
+                });
     }
 
 }

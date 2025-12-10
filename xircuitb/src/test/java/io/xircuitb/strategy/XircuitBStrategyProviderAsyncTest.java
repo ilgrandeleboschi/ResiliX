@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -87,10 +88,31 @@ class XircuitBStrategyProviderAsyncTest {
         XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
         doReturn(cache).when(spy).computeCache(anyString(), any());
 
-        when(cb.executeCompletionStage(any())).thenThrow(CallNotPermittedException.class);
+        when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(mock(CallNotPermittedException.class)));
 
         Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, method);
         Object result = wrapped.get().toCompletableFuture().get();
         assertEquals("Fallback executed", result);
     }
+
+
+    @Test
+    void decorate_wrapsSupplier_callsException() throws NoSuchMethodException {
+        Method method = Fixture.SimpleXb.class.getMethod("singleXb");
+        Supplier<CompletionStage<Object>> original = () -> CompletableFuture.completedFuture("ok");
+        when(factory.resolveAsyncFallback(any())).thenReturn(new MockFallbackProviderAsync());
+
+        XircuitBStrategyProviderAsync spy = spy(strategy);
+        CircuitBreaker cb = mock(CircuitBreaker.class);
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
+        doReturn(cache).when(spy).computeCache(anyString(), any());
+
+        Exception e = new Exception("Regular exception");
+        when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(e));
+
+        Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, method);
+        Exception actual = assertThrows(Exception.class, () -> wrapped.get().toCompletableFuture().get());
+        assertEquals("Regular exception", actual.getCause().getMessage());
+    }
+
 }
