@@ -2,7 +2,9 @@ package io.xircuitb.validator;
 
 import io.xircuitb.exceptions.XircuitBConfigurationException;
 import io.xircuitb.model.XircuitBConfigModel;
+import io.xircuitb.provider.XircuitBFallbackProviderAsync;
 import org.junit.jupiter.api.Test;
+import utils.MockFallbackProviderSync;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -111,6 +113,17 @@ class XircuitBValidatorTest {
         );
 
         assertEquals("Exception class is not a valid exception: INVALID_EXCEPTION", ex.getMessage());
+    }
+
+    @Test
+    void validateFallbackClass() {
+        MockFallbackProviderSync mock = new MockFallbackProviderSync();
+        XircuitBConfigurationException ex = assertThrows(
+                XircuitBConfigurationException.class,
+                () -> XircuitBValidator.validateFallbackClass(mock, XircuitBFallbackProviderAsync.class)
+        );
+
+        assertEquals("class utils.MockFallbackProviderSync must implement XircuitBFallbackProviderAsync", ex.getMessage());
     }
 
 }

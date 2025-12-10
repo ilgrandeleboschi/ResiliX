@@ -5,6 +5,8 @@ import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.provider.XircuitBFallbackProvider;
+import io.xircuitb.provider.XircuitBFallbackProviderAsync;
+import io.xircuitb.provider.XircuitBFallbackProviderSync;
 import io.xircuitb.provider.defaults.VoidConfigProvider;
 import io.xircuitb.provider.defaults.VoidFallbackProvider;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import static io.xircuitb.utils.XircuitBUtils.getOrDefault;
 import static io.xircuitb.validator.XircuitBValidator.validateAndConvertDays;
 import static io.xircuitb.validator.XircuitBValidator.validateAndConvertExceptions;
 import static io.xircuitb.validator.XircuitBValidator.validateAndConvertTime;
+import static io.xircuitb.validator.XircuitBValidator.validateFallbackClass;
 
 @Component
 @RequiredArgsConstructor
@@ -30,9 +33,19 @@ public class XircuitBConfigFactory {
         return xb.configProvider() != VoidConfigProvider.class ? fromProvider(xb) : buildXircuitBConfigModel(xb);
     }
 
-    public XircuitBFallbackProvider resolveFallback(Class<? extends XircuitBFallbackProvider> fallback) {
+    public XircuitBFallbackProviderSync resolveSyncFallback(Class<? extends XircuitBFallbackProvider> fallback) {
+        return resolveFallback(fallback, XircuitBFallbackProviderSync.class);
+    }
+
+    public XircuitBFallbackProviderAsync resolveAsyncFallback(Class<? extends XircuitBFallbackProvider> fallback) {
+        return resolveFallback(fallback, XircuitBFallbackProviderAsync.class);
+    }
+
+    private <T> T resolveFallback(Class<? extends XircuitBFallbackProvider> fallback, Class<T> clazz) {
         if (fallback == VoidFallbackProvider.class) return null;
-        return ctx.getBean(fallback);
+        Object bean = ctx.getBean(fallback);
+        validateFallbackClass(bean, clazz);
+        return clazz.cast(bean);
     }
 
     private XircuitBConfigModel fromProvider(XircuitB xb) {

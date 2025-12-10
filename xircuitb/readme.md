@@ -19,6 +19,7 @@ Annotate a method, and XircuitB does the heavy lifting:
 - Lets you provide a **runtime configuration** group.
 - Handles **active periods** (time-of-day and day-of-week).
 - Supports **multiple circuit breakers** on the same method.
+- Automatically handle **sync and async** methods, just slap `@XircuitB` wherever you want!
 
 It’s basically magic… but without smoke or mirrors. 🎩✨
 
@@ -69,7 +70,7 @@ everywhere.
 | activeFrom              | 00:00                                                                             | The starting time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                     |
 | activeTo                | 23:59                                                                             | The ending time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                       |
 | activeDays              | DayOfWeek.values()                                                                | The days of the week when the circuit breaker is active. By default, all days are active                                                                                                                                                                                              |
-| exceptionsToCatch       | Exception.class                                                                   | The type of exception that do count for circuit breaker metrics, it can be a custom one                                                                                                                                                                                               |
+| exceptionsToCatch       | Exception.class                                                                   | The type of exception that do count for circuit breaker metrics, it can be a custom exception class.                                                                                                                                                                                  |
 
 ## Advanced Features
 
@@ -99,21 +100,43 @@ Outside this period, the method runs **normally**, CB-free.
 
 ## Fallback Providers
 
-Implement `XircuitBFallbackProvider` for automatic fallback:
+Automatic fallback provider, you just need to pay attention if your method is sync or async to implement the correct
+interface.
+
+| Method Type | Fallback Interface              |
+|-------------|---------------------------------|
+| Sync        | `XircuitBFallbackProviderSync`  |
+| Async       | `XircuitBFallbackProviderAsync` |
+
+Pretty easy, right??
 
 ```java
 import io.xircuitb.annotation.XircuitB;
 import org.springframework.stereotype.Component;
 
 @Component //please remember to annotate it as a spring bean
-public class MyFallbackProvider implements XircuitBFallbackProvider {
+public class MySyncFallbackProvider implements XircuitBFallbackProviderSync {
     @Override
     public Object apply(CallNotPermittedException cause) {
         return "Fallback executed";
     }
 }
 
-@XircuitB(fallbackProvider = MyFallbackProvider.class)
+@XircuitB(fallbackProvider = MySyncFallbackProvider.class)
+public String doSyncStuff() {}
+
+
+@Component //please remember to annotate it as a spring bean
+public class MyAsyncFallbackProvider implements XircuitBFallbackProviderAsync {
+   @Override
+   public CompletionStage<Object> apply(CallNotPermittedException cause) {
+      return CompletableFuture.completedFuture("Async fallback executed");
+   }
+}
+
+@XircuitB(fallbackProvider = MyAsyncFallbackProvider.class)
+public CompletableFuture<String> doAsyncStuff() {}
+
 ```
 
 ## Configuration Providers
@@ -128,7 +151,7 @@ import org.springframework.stereotype.Component;
 public class MyConfigurationProvider implements XircuitBConfigProvider {
     @Override
     public XircuitBConfigModel apply() {
-        return youCustomXircuitBConfigModel();
+        return yourCustomXircuitBConfigModel();
     }
 }
 

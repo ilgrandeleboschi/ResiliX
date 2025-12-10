@@ -9,3 +9,7 @@ default-xircuitb:
   activeFrom: "00:00"
   activeTo: "23:59"
   activeDays:
+
+resilix:
+  xircuitb:
+    priority: 1

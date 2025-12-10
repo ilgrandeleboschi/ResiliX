@@ -2,11 +2,13 @@ package io.xircuitb.config;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.resilix.aspect.ResiliXAspect;
-import io.resilix.provider.ResiliXStrategyProvider;
+import io.resilix.strategy.ResiliXStrategy;
 import io.xircuitb.factory.XircuitBConfigFactory;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.monitor.CircuitBreakerMonitor;
 import io.xircuitb.strategy.XircuitBStrategyProvider;
+import io.xircuitb.strategy.XircuitBStrategyProviderAsync;
+import io.xircuitb.strategy.XircuitBStrategyProviderSync;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -41,13 +43,25 @@ public class XircuitBAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBStrategyProvider xircuitBProvider(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
-        return new XircuitBStrategyProvider(registry, configFactory, clock, 1);
+    public XircuitBStrategyProvider xircuitBStrategyProvider(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
+        return new XircuitBStrategyProvider(registry, configFactory, clock);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public ResiliXAspect resilixAspect(List<ResiliXStrategyProvider> providers) {
+    public XircuitBStrategyProviderSync xircuitBStrategyProviderSync(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
+        return new XircuitBStrategyProviderSync(registry, configFactory, clock);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public XircuitBStrategyProviderAsync xircuitBStrategyProviderAsync(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
+        return new XircuitBStrategyProviderAsync(registry, configFactory, clock);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ResiliXAspect resilixAspect(List<ResiliXStrategy> providers) {
         return new ResiliXAspect(providers);
     }
 

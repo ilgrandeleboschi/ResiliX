@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.test.context.ActiveProfiles;
 import utils.MockConfigProvider;
-import utils.MockFallbackProvider;
+import utils.MockFallbackProviderSync;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -28,7 +28,7 @@ import static utils.MockBuilder.FIXED_CLOCK;
 @SpringBootTest(
         classes = {XircuitBAutoConfiguration.class,
                 DummyService.class,
-                MockFallbackProvider.class,
+                MockFallbackProviderSync.class,
                 MockConfigProvider.class},
         webEnvironment = SpringBootTest.WebEnvironment.NONE
 )

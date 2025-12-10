@@ -60,4 +60,10 @@ public class XircuitBValidator {
         }
     }
 
+    public static void validateFallbackClass(Object bean, Class<?> clazz) {
+        if (!clazz.isInstance(bean)) {
+            throw new XircuitBConfigurationException(bean.getClass() + " must implement " + clazz.getSimpleName());
+        }
+    }
+
 }
