@@ -1,4 +1,4 @@
-package io.resilix.aspect;
+package io.resilix.pipeline;
 
 import io.resilix.strategy.ResiliXStrategyAsync;
 import io.resilix.strategy.ResiliXStrategySync;
@@ -42,6 +42,7 @@ class ResiliXAspectTest {
         Method method = Dummy.class.getMethod("syncMethod");
         MethodSignature signature = mock(MethodSignature.class);
 
+        when(pjp.getTarget()).thenReturn(new Dummy());
         when(pjp.getSignature()).thenReturn(signature);
         when(signature.getMethod()).thenReturn(method);
         when(pjp.proceed()).thenReturn("ok");
@@ -58,6 +59,7 @@ class ResiliXAspectTest {
         Method method = Dummy.class.getMethod("asyncMethod");
         MethodSignature signature = mock(MethodSignature.class);
 
+        when(pjp.getTarget()).thenReturn(new Dummy());
         when(pjp.getSignature()).thenReturn(signature);
         when(signature.getMethod()).thenReturn(method);
         when(pjp.proceed()).thenReturn(CompletableFuture.completedFuture("asyncOk"));
@@ -75,6 +77,7 @@ class ResiliXAspectTest {
         Method method = Dummy.class.getMethod("asyncMethod");
         MethodSignature signature = mock(MethodSignature.class);
 
+        when(pjp.getTarget()).thenReturn(new Dummy());
         when(pjp.getSignature()).thenReturn(signature);
         when(signature.getMethod()).thenReturn(method);
         when(pjp.proceed()).thenThrow(new RuntimeException("error"));

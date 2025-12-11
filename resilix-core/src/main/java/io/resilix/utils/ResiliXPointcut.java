@@ -1,4 +1,4 @@
-package io.resilix.pointcut;
+package io.resilix.utils;
 
 import org.aspectj.lang.annotation.Pointcut;
 

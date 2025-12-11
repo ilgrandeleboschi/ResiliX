@@ -1,5 +1,6 @@
 package io.resilix.utils;
 
+import io.github.resilience4j.core.functions.CheckedSupplier;
 import lombok.experimental.UtilityClass;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.springframework.scheduling.annotation.Async;
@@ -33,6 +34,10 @@ public class ResiliXUtils {
                 return failed;
             }
         };
+    }
+
+    public static CheckedSupplier<Object> proceedSupplier(ProceedingJoinPoint pjp) {
+        return pjp::proceed;
     }
 
 }

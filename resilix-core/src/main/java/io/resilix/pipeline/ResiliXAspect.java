@@ -1,6 +1,7 @@
-package io.resilix.aspect;
+package io.resilix.pipeline;
 
-import io.resilix.pipeline.ResiliXExecutionPipeline;
+import io.resilix.model.MethodKey;
+import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategy;
 import io.resilix.strategy.ResiliXStrategyAsync;
 import io.resilix.strategy.ResiliXStrategySync;
@@ -15,6 +16,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.resilix.utils.ResiliXUtils.isAsync;
 
@@ -23,21 +26,31 @@ import static io.resilix.utils.ResiliXUtils.isAsync;
 @RequiredArgsConstructor
 public class ResiliXAspect {
 
-    private final List<ResiliXStrategy> providers;
+    private final List<ResiliXStrategy> allStrategies;
+    private final Map<MethodKey, List<? extends ResiliXStrategy>> cache = new ConcurrentHashMap<>();
 
-    @Around("io.resilix.pointcut.ResiliXPointcut.allResiliX()")
+    @Around("io.resilix.utils.ResiliXPointcut.allResiliX()")
     public Object applyResiliX(ProceedingJoinPoint pjp) throws Throwable {
         Method method = ((MethodSignature) pjp.getSignature()).getMethod();
+        MethodKey key = new MethodKey(pjp.getTarget().getClass(), method);
 
-        List<? extends ResiliXStrategy> strategies = isAsync(method) ?
-                selectStrategies(method, ResiliXStrategyAsync.class) :
-                selectStrategies(method, ResiliXStrategySync.class);
+        List<? extends ResiliXStrategy> strategies = cache.computeIfAbsent(key, this::resolveStrategies);
 
-        return new ResiliXExecutionPipeline(strategies).execute(pjp, method);
+        return new ResiliXExecutionPipeline(new ResiliXStrategyPipeline(strategies)).execute(
+                pjp,
+                new ResiliXContext(method, pjp.getArgs(), method.getAnnotations(), new ConcurrentHashMap<>()
+                )
+        );
+    }
+
+    private List<? extends ResiliXStrategy> resolveStrategies(MethodKey key) {
+        return isAsync(key.method()) ?
+                selectStrategies(key.method(), ResiliXStrategyAsync.class) :
+                selectStrategies(key.method(), ResiliXStrategySync.class);
     }
 
     private <T extends ResiliXStrategy> List<T> selectStrategies(Method method, Class<T> type) {
-        return providers.stream()
+        return allStrategies.stream()
                 .filter(type::isInstance)
                 .map(type::cast)
                 .filter(strategy -> Arrays.stream(method.getAnnotations()).anyMatch(strategy::support))

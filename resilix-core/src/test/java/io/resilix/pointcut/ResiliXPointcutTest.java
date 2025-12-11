@@ -1,5 +1,6 @@
 package io.resilix.pointcut;
 
+import io.resilix.utils.ResiliXPointcut;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
