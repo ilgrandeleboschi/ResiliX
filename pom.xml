@@ -26,6 +26,8 @@
         <resilience4j.version>2.3.0</resilience4j.version>
         <lombok.version>1.18.42</lombok.version>
         <aspectj.version>1.9.25</aspectj.version>
+        <project.build.sourceEncoding>${encoding.type}</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>${encoding.type}</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
