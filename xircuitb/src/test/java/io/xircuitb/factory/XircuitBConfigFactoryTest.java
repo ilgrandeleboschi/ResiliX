@@ -4,14 +4,14 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
-import io.xircuitb.provider.XircuitBFallbackProviderAsync;
-import io.xircuitb.provider.XircuitBFallbackProviderSync;
+import io.xircuitb.provider.XircuitBFallbackProvider;
 import io.xircuitb.provider.defaults.VoidFallbackProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import utils.Fixture;
 import utils.MockConfigProvider;
@@ -50,20 +50,28 @@ class XircuitBConfigFactoryTest {
     @Test
     void resolveSyncFallback() {
         when(ctx.getBean(MockFallbackProviderSync.class)).thenReturn(new MockFallbackProviderSync());
-        XircuitBFallbackProviderSync mockFallbackSyncProvider = factory.resolveSyncFallback(MockFallbackProviderSync.class);
-        assertEquals("Fallback executed", mockFallbackSyncProvider.apply(mock()));
+        XircuitBFallbackProvider xircuitBFallbackProvider = factory.resolveFallback(MockFallbackProviderSync.class);
+        MockFallbackProviderSync mockFallbackProviderSync = (MockFallbackProviderSync) xircuitBFallbackProvider;
+        assertEquals("Fallback executed", mockFallbackProviderSync.apply(mock()));
     }
 
     @Test
     void resolveAsyncFallback() throws ExecutionException, InterruptedException {
         when(ctx.getBean(MockFallbackProviderAsync.class)).thenReturn(new MockFallbackProviderAsync());
-        XircuitBFallbackProviderAsync xircuitBFallbackProviderAsync = factory.resolveAsyncFallback(MockFallbackProviderAsync.class);
-        assertEquals("Fallback executed", xircuitBFallbackProviderAsync.apply(mock()).toCompletableFuture().get());
+        XircuitBFallbackProvider xircuitBFallbackProvider = factory.resolveFallback(MockFallbackProviderAsync.class);
+        MockFallbackProviderAsync mockFallbackProviderAsync = (MockFallbackProviderAsync) xircuitBFallbackProvider;
+        assertEquals("Fallback executed", mockFallbackProviderAsync.apply(mock()).toCompletableFuture().get());
     }
 
     @Test
     void resolveFallback_null() {
-        assertNull(factory.resolveSyncFallback(VoidFallbackProvider.class));
+        assertNull(factory.resolveFallback(VoidFallbackProvider.class));
+    }
+
+    @Test
+    void resolveFallback_notSpringBean() {
+        when(ctx.getBean(MockFallbackProviderSync.class)).thenThrow(new NoSuchBeanDefinitionException(MockFallbackProviderSync.class));
+        assertNull(factory.resolveFallback(MockFallbackProviderSync.class));
     }
 
     @Test

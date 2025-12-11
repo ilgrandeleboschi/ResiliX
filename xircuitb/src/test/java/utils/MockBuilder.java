@@ -1,18 +1,16 @@
 package utils;
 
+import io.resilix.model.ResiliXContext;
 import io.xircuitb.model.XircuitBConfigModel;
 
+import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 public class MockBuilder {
-
-    public static final XircuitBConfigModel MOCKED_CONFIG = createXircuitBConfigModel();
-    public static final int INVALID_FIELD_TYPE = 1;
-    public final XircuitBConfigModel notStaticConfig = XircuitBConfigModel.builder().build();
-    private final XircuitBConfigModel invalidAccessField = XircuitBConfigModel.builder().build();
 
     public static final Clock FIXED_CLOCK = Clock.fixed(
             LocalDateTime.of(2024, 1, 1, 12, 0).toInstant(ZoneOffset.UTC),
@@ -30,16 +28,8 @@ public class MockBuilder {
                 .build();
     }
 
-    public XircuitBConfigModel notStaticConfigMethod() {
-        return invalidAccessConfigMethod();
-    }
-
-    private XircuitBConfigModel invalidAccessConfigMethod() {
-        return invalidAccessField;
-    }
-
-    public static int notValidReturnConfigMethod() {
-        return 1;
+    public static ResiliXContext createResiliXContext(Method method) {
+        return new ResiliXContext(method, new Object[0], method.getAnnotations(), Map.of());
     }
 
 }

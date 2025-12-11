@@ -31,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static utils.MockBuilder.FIXED_CLOCK;
+import static utils.MockBuilder.createResiliXContext;
 import static utils.MockBuilder.createXircuitBConfigModel;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,7 +65,7 @@ class XircuitBStrategyProviderSyncTest {
         when(factory.resolveConfig(any())).thenReturn(createXircuitBConfigModel());
         when(registry.circuitBreaker(anyString(), any(CircuitBreakerConfig.class))).thenReturn(mock(CircuitBreaker.class));
 
-        CheckedSupplier<Object> wrapped = strategy.decorate(original, method);
+        CheckedSupplier<Object> wrapped = strategy.decorate(original, createResiliXContext(method));
 
         Object result = wrapped.get();
         assertThat(result).isEqualTo("executed");
@@ -75,16 +76,15 @@ class XircuitBStrategyProviderSyncTest {
         Fixture.SimpleXb instance = new Fixture.SimpleXb();
         Method method = instance.getClass().getMethod("singleXb");
         CheckedSupplier<Object> original = () -> method.invoke(instance);
-        when(factory.resolveSyncFallback(any())).thenReturn(new MockFallbackProviderSync());
 
         XircuitBStrategyProviderSync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderSync());
         doReturn(cache).when(spy).computeCache(anyString(), any());
 
         when(cb.executeCheckedSupplier(any())).thenThrow(CallNotPermittedException.class);
 
-        CheckedSupplier<Object> wrapped = spy.decorate(original, method);
+        CheckedSupplier<Object> wrapped = spy.decorate(original, createResiliXContext(method));
         assertEquals("Fallback executed", wrapped.get());
     }
 
@@ -97,7 +97,7 @@ class XircuitBStrategyProviderSyncTest {
         when(factory.resolveConfig(any())).thenThrow(NullPointerException.class);
 
         XircuitBStrategyProviderSync spy = spy(strategy);
-        CheckedSupplier<Object> wrapped = spy.decorate(original, method);
+        CheckedSupplier<Object> wrapped = spy.decorate(original, createResiliXContext(method));
         assertEquals("executed", wrapped.get());
     }
 

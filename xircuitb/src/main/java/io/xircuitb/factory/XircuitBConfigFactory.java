@@ -5,11 +5,11 @@ import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.provider.XircuitBFallbackProvider;
-import io.xircuitb.provider.XircuitBFallbackProviderAsync;
-import io.xircuitb.provider.XircuitBFallbackProviderSync;
 import io.xircuitb.provider.defaults.VoidConfigProvider;
 import io.xircuitb.provider.defaults.VoidFallbackProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +22,7 @@ import static io.xircuitb.validator.XircuitBValidator.validateAndConvertExceptio
 import static io.xircuitb.validator.XircuitBValidator.validateAndConvertTime;
 import static io.xircuitb.validator.XircuitBValidator.validateFallbackClass;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class XircuitBConfigFactory {
@@ -33,19 +34,16 @@ public class XircuitBConfigFactory {
         return xb.configProvider() != VoidConfigProvider.class ? fromProvider(xb) : buildXircuitBConfigModel(xb);
     }
 
-    public XircuitBFallbackProviderSync resolveSyncFallback(Class<? extends XircuitBFallbackProvider> fallback) {
-        return resolveFallback(fallback, XircuitBFallbackProviderSync.class);
-    }
-
-    public XircuitBFallbackProviderAsync resolveAsyncFallback(Class<? extends XircuitBFallbackProvider> fallback) {
-        return resolveFallback(fallback, XircuitBFallbackProviderAsync.class);
-    }
-
-    private <T> T resolveFallback(Class<? extends XircuitBFallbackProvider> fallback, Class<T> clazz) {
+    public XircuitBFallbackProvider resolveFallback(Class<? extends XircuitBFallbackProvider> fallback) {
         if (fallback == VoidFallbackProvider.class) return null;
-        Object bean = ctx.getBean(fallback);
-        validateFallbackClass(bean, clazz);
-        return clazz.cast(bean);
+        try {
+            XircuitBFallbackProvider bean = ctx.getBean(fallback);
+            validateFallbackClass(bean, XircuitBFallbackProvider.class);
+            return bean;
+        } catch (NoSuchBeanDefinitionException e) {
+            log.warn("Fallback class {} is not a Spring bean. XircuitB will skip fallback behavior", fallback.getSimpleName(), e);
+            return null;
+        }
     }
 
     private XircuitBConfigModel fromProvider(XircuitB xb) {

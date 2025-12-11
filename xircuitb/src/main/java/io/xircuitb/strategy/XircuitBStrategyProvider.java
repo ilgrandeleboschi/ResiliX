@@ -9,6 +9,7 @@ import io.xircuitb.factory.XircuitBConfigFactory;
 import io.xircuitb.model.ActivePeriod;
 import io.xircuitb.model.XircuitBCacheModel;
 import io.xircuitb.model.XircuitBConfigModel;
+import io.xircuitb.provider.XircuitBFallbackProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,8 +62,9 @@ public class XircuitBStrategyProvider implements ResiliXStrategy {
     protected XircuitBCacheModel computeCache(String xbName, XircuitB xB) {
         return xbCache.computeIfAbsent(xbName, name -> {
             XircuitBConfigModel config = createConfiguration(xB, name);
+            XircuitBFallbackProvider fallback = factory.resolveFallback(xB.fallbackProvider());
             CircuitBreaker cb = createCircuitBreaker(config, name);
-            return cb == null ? null : new XircuitBCacheModel(cb, config);
+            return cb == null ? null : new XircuitBCacheModel(cb, config, fallback);
         });
     }
 

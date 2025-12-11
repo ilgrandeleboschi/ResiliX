@@ -1,7 +1,7 @@
 package io.xircuitb.config;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.resilix.aspect.ResiliXAspect;
+import io.resilix.pipeline.ResiliXAspect;
 import io.resilix.strategy.ResiliXStrategy;
 import io.xircuitb.factory.XircuitBConfigFactory;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;

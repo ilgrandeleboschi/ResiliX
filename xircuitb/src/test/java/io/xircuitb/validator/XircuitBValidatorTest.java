@@ -49,7 +49,7 @@ class XircuitBValidatorTest {
                 () -> XircuitBValidator.validateParameters(config)
         );
 
-        assertEquals("waitDurationInOpenState must be positive", ex.getMessage());
+        assertEquals("waitDurationInOpenState must be positive or zero", ex.getMessage());
     }
 
     @Test
@@ -68,6 +68,25 @@ class XircuitBValidatorTest {
         );
 
         assertEquals("slidingWindowSize must be positive", ex.getMessage());
+    }
+
+    @Test
+    void validateParameters_failureRateThresholdNegative_throw() {
+        XircuitBConfigModel config = XircuitBConfigModel.builder()
+                .slidingWindowType("COUNT_BASED")
+                .waitDurationInOpenState(1000)
+                .minNumberOfCalls(1)
+                .numCallHalfOpen(10)
+                .failureRateThreshold(105)
+                .slidingWindowSize(1)
+                .build();
+
+        XircuitBConfigurationException ex = assertThrows(
+                XircuitBConfigurationException.class,
+                () -> XircuitBValidator.validateParameters(config)
+        );
+
+        assertEquals("failureRateThreshold must be between 0.0 and 100.0", ex.getMessage());
     }
 
     @Test

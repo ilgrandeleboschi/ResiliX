@@ -18,9 +18,15 @@ public class XircuitBUtils {
         }
     }
 
-    public static void checkPositive(double value, String name) {
-        if (value <= 0) {
-            throw new XircuitBConfigurationException(name + " must be positive");
+    public static void checkPositiveNotZero(double value, String name) {
+        if (value < 0) {
+            throw new XircuitBConfigurationException(name + " must be positive or zero");
+        }
+    }
+
+    public static void checkBetween(double value, double from, double to, String name) {
+        if (value < from || value > to) {
+            throw new XircuitBConfigurationException(name + " must be between " + from + " and " + to);
         }
     }
 

@@ -3,6 +3,7 @@ package io.xircuitb.strategy;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategyAsync;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
@@ -26,8 +27,8 @@ public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider impl
     }
 
     @Override
-    public Supplier<CompletionStage<Object>> decorate(Supplier<CompletionStage<Object>> supplier, Method method) {
-        return applyCircuitBreakersAsync(getXBS(method), method, supplier);
+    public Supplier<CompletionStage<Object>> decorate(Supplier<CompletionStage<Object>> supplier, ResiliXContext ctx) {
+        return applyCircuitBreakersAsync(getXBS(ctx.getMethod()), ctx.getMethod(), supplier);
     }
 
     private Supplier<CompletionStage<Object>> applyCircuitBreakersAsync(XircuitB[] xBs, Method method, Supplier<CompletionStage<Object>> supplier) {
@@ -39,7 +40,10 @@ public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider impl
             XircuitBCacheModel cache = computeCache(xbName, xB);
 
             if (cache != null && isActiveNow(cache.getConfig())) {
-                wrapped = wrapAsync(cache.getCb(), wrapped, factory.resolveAsyncFallback(xB.fallbackProvider()));
+                wrapped = wrapAsync(
+                        cache.getCb(),
+                        wrapped,
+                        cache.getFallback() instanceof XircuitBFallbackProviderAsync fallback ? fallback : null);
             }
         }
 

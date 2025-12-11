@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.core.functions.CheckedSupplier;
+import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategySync;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
@@ -24,8 +25,8 @@ public class XircuitBStrategyProviderSync extends XircuitBStrategyProvider imple
     }
 
     @Override
-    public CheckedSupplier<Object> decorate(CheckedSupplier<Object> checkedSupplier, Method method) {
-        return applyCircuitBreakersSync(getXBS(method), method, checkedSupplier);
+    public CheckedSupplier<Object> decorate(CheckedSupplier<Object> checkedSupplier, ResiliXContext ctx) {
+        return applyCircuitBreakersSync(getXBS(ctx.getMethod()), ctx.getMethod(), checkedSupplier);
     }
 
     private CheckedSupplier<Object> applyCircuitBreakersSync(XircuitB[] xBs, Method method, CheckedSupplier<Object> execution) {
@@ -37,7 +38,10 @@ public class XircuitBStrategyProviderSync extends XircuitBStrategyProvider imple
             XircuitBCacheModel cache = computeCache(xbName, xB);
 
             if (cache != null && isActiveNow(cache.getConfig()))
-                wrapped = wrap(cache.getCb(), wrapped, factory.resolveSyncFallback(xB.fallbackProvider()));
+                wrapped = wrap(
+                        cache.getCb(),
+                        wrapped,
+                        cache.getFallback() instanceof XircuitBFallbackProviderSync fallback ? fallback : null);
 
         }
 

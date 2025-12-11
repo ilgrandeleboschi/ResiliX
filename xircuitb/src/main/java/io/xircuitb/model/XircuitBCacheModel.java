@@ -1,6 +1,7 @@
 package io.xircuitb.model;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.xircuitb.provider.XircuitBFallbackProvider;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,5 +11,6 @@ public class XircuitBCacheModel {
 
     private CircuitBreaker cb;
     private XircuitBConfigModel config;
+    private XircuitBFallbackProvider fallback;
 
 }

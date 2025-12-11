@@ -100,13 +100,13 @@ Outside this period, the method runs **normally**, CB-free.
 
 ## Fallback Providers
 
-Automatic fallback provider, you just need to pay attention if your method is sync or async to implement the correct
-interface.
+Automatic fallback provider, you just need to pay attention if your method is sync or async to implement the correct interface.
 
-| Method Type | Fallback Interface              |
-|-------------|---------------------------------|
-| Sync        | `XircuitBFallbackProviderSync`  |
-| Async       | `XircuitBFallbackProviderAsync` |
+
+| Method Type | Fallback Interface             |
+|-------------|--------------------------------|
+| Sync        | `XircuitBFallbackProviderSync` |
+| Async       | `XircuitBFallbackProviderAsync`|
 
 Pretty easy, right??
 

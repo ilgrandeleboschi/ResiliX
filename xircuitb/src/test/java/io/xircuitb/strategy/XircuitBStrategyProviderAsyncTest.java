@@ -34,6 +34,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static utils.MockBuilder.FIXED_CLOCK;
+import static utils.MockBuilder.createResiliXContext;
 import static utils.MockBuilder.createXircuitBConfigModel;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,7 +73,7 @@ class XircuitBStrategyProviderAsyncTest {
         when(factory.resolveConfig(any())).thenReturn(createXircuitBConfigModel());
         when(registry.circuitBreaker(anyString(), any(CircuitBreakerConfig.class))).thenReturn(mock(CircuitBreaker.class));
 
-        Supplier<CompletionStage<Object>> wrapped = strategy.decorate(original, method);
+        Supplier<CompletionStage<Object>> wrapped = strategy.decorate(original, createResiliXContext(method));
 
         assertThat(wrapped.get().toCompletableFuture().get()).isEqualTo("executed");
     }
@@ -81,16 +82,15 @@ class XircuitBStrategyProviderAsyncTest {
     void decorate_wrapsSupplier_callsFallbackOnCallNotPermitted() throws NoSuchMethodException, ExecutionException, InterruptedException {
         Method method = Fixture.SimpleXb.class.getMethod("singleXb");
         Supplier<CompletionStage<Object>> original = () -> CompletableFuture.completedFuture("ok");
-        when(factory.resolveAsyncFallback(any())).thenReturn(new MockFallbackProviderAsync());
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderAsync());
         doReturn(cache).when(spy).computeCache(anyString(), any());
 
         when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(mock(CallNotPermittedException.class)));
 
-        Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, method);
+        Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, createResiliXContext(method));
         Object result = wrapped.get().toCompletableFuture().get();
         assertEquals("Fallback executed", result);
     }
@@ -100,17 +100,16 @@ class XircuitBStrategyProviderAsyncTest {
     void decorate_wrapsSupplier_callsException() throws NoSuchMethodException {
         Method method = Fixture.SimpleXb.class.getMethod("singleXb");
         Supplier<CompletionStage<Object>> original = () -> CompletableFuture.completedFuture("ok");
-        when(factory.resolveAsyncFallback(any())).thenReturn(new MockFallbackProviderAsync());
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderAsync());
         doReturn(cache).when(spy).computeCache(anyString(), any());
 
         Exception e = new Exception("Regular exception");
         when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(e));
 
-        Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, method);
+        Supplier<CompletionStage<Object>> wrapped = spy.decorate(original, createResiliXContext(method));
         Exception actual = assertThrows(Exception.class, () -> wrapped.get().toCompletableFuture().get());
         assertEquals("Regular exception", actual.getCause().getMessage());
     }
