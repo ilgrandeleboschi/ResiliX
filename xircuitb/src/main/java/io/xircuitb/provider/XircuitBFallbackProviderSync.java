@@ -8,7 +8,7 @@ public interface XircuitBFallbackProviderSync extends XircuitBFallbackProvider {
     Object apply(CallNotPermittedException cause);
 
     default Object returnFallbackModel(String xbName, Object model, CallNotPermittedException cause) {
-        logOperCircuit(xbName, cause);
+        log(xbName, cause);
         return model;
     }
 

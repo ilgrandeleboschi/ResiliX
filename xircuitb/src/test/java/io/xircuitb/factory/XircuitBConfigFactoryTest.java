@@ -1,11 +1,15 @@
 package io.xircuitb.factory;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.resilix.exception.ResiliXException;
+import io.resilix.model.ResiliXContext;
 import io.xircuitb.annotation.XircuitB;
+import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.provider.XircuitBFallbackProvider;
-import io.xircuitb.provider.defaults.VoidFallbackProvider;
+import io.xircuitb.registry.XircuitBConfigRegistry;
+import io.xircuitb.registry.XircuitBFallbackRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,19 +17,25 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
-import utils.Fixture;
-import utils.MockConfigProvider;
-import utils.MockFallbackProviderAsync;
-import utils.MockFallbackProviderSync;
+import util.Fixture;
+import util.MockConfigProvider;
+import util.MockFallbackProviderAsync;
+import util.MockFallbackProviderSync;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.ExecutionException;
 
 import static io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static utils.MockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.FIXED_CLOCK;
+import static util.XircuitBMockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBConfigFactoryTest {
@@ -33,13 +43,19 @@ class XircuitBConfigFactoryTest {
     @Mock
     XircuitBDefaultPropertiesModel defaultConf;
     @Mock
-    ApplicationContext ctx;
+    ApplicationContext appCtx;
+    @Mock
+    XircuitBConfigRegistry configRegistry;
+    @Mock
+    XircuitBFallbackRegistry fallbackRegistry;
     @InjectMocks
-    XircuitBConfigFactory factory;
+    XircuitBConfigFactory configFactory;
+
+    ResiliXContext ctx = defaultResiliXContext();
 
     @Test
     void buildCircuitBreakerConfig_notNull() {
-        CircuitBreakerConfig actual = factory.buildCircuitBreakerConfig(createXircuitBConfigModel());
+        CircuitBreakerConfig actual = configFactory.buildCircuitBreakerConfig(createXircuitBConfigModel(), FIXED_CLOCK);
         assertEquals(COUNT_BASED, actual.getSlidingWindowType());
         assertEquals(50, actual.getFailureRateThreshold());
         assertEquals(100, actual.getSlidingWindowSize());
@@ -48,66 +64,57 @@ class XircuitBConfigFactoryTest {
     }
 
     @Test
-    void resolveSyncFallback() {
-        when(ctx.getBean(MockFallbackProviderSync.class)).thenReturn(new MockFallbackProviderSync());
-        XircuitBFallbackProvider xircuitBFallbackProvider = factory.resolveFallback(MockFallbackProviderSync.class);
+    void resolveSyncFallback() throws NoSuchMethodException {
+        Method m = Fixture.FallbackProvider.class.getDeclaredMethod("fallbackProviderSync");
+        XircuitB xb = m.getAnnotation(XircuitB.class);
+        when(appCtx.getBean(MockFallbackProviderSync.class)).thenReturn(new MockFallbackProviderSync());
+        XircuitBFallbackProvider xircuitBFallbackProvider = configFactory.resolveFallback(xb, ctx);
         MockFallbackProviderSync mockFallbackProviderSync = (MockFallbackProviderSync) xircuitBFallbackProvider;
         assertEquals("Fallback executed", mockFallbackProviderSync.apply(mock()));
     }
 
     @Test
-    void resolveAsyncFallback() throws ExecutionException, InterruptedException {
-        when(ctx.getBean(MockFallbackProviderAsync.class)).thenReturn(new MockFallbackProviderAsync());
-        XircuitBFallbackProvider xircuitBFallbackProvider = factory.resolveFallback(MockFallbackProviderAsync.class);
+    void resolveAsyncFallback() throws ExecutionException, InterruptedException, NoSuchMethodException {
+        Method m = Fixture.FallbackProvider.class.getDeclaredMethod("fallbackProviderAsync");
+        XircuitB xb = m.getAnnotation(XircuitB.class);
+        when(appCtx.getBean(MockFallbackProviderAsync.class)).thenReturn(new MockFallbackProviderAsync());
+        XircuitBFallbackProvider xircuitBFallbackProvider = configFactory.resolveFallback(xb, ctx);
         MockFallbackProviderAsync mockFallbackProviderAsync = (MockFallbackProviderAsync) xircuitBFallbackProvider;
         assertEquals("Fallback executed", mockFallbackProviderAsync.apply(mock()).toCompletableFuture().get());
     }
 
     @Test
-    void resolveFallback_null() {
-        assertNull(factory.resolveFallback(VoidFallbackProvider.class));
+    void resolveFallback_null() throws NoSuchMethodException {
+        Method m = Fixture.FallbackProvider.class.getDeclaredMethod("fallbackProviderVoid");
+        XircuitB xb = m.getAnnotation(XircuitB.class);
+        assertNull(configFactory.resolveFallback(xb, ctx));
     }
 
     @Test
-    void resolveFallback_notSpringBean() {
-        when(ctx.getBean(MockFallbackProviderSync.class)).thenThrow(new NoSuchBeanDefinitionException(MockFallbackProviderSync.class));
-        assertNull(factory.resolveFallback(MockFallbackProviderSync.class));
+    void resolveFallback_notSpringBean() throws NoSuchMethodException {
+        Method m = Fixture.FallbackProvider.class.getDeclaredMethod("fallbackProviderSync");
+        XircuitB xb = m.getAnnotation(XircuitB.class);
+        when(appCtx.getBean(MockFallbackProviderSync.class)).thenThrow(new NoSuchBeanDefinitionException(MockFallbackProviderSync.class));
+        XircuitBConfigurationException actual = assertThrows(XircuitBConfigurationException.class, () -> configFactory.resolveFallback(xb, ctx));
+        assertEquals("Fallback class MockFallbackProviderSync is not a Spring bean", actual.getMessage());
     }
 
     @Test
     void buildCircuitBreakerConfig_null() {
-        assertNull(factory.buildCircuitBreakerConfig(null));
+        assertNull(configFactory.buildCircuitBreakerConfig(null, FIXED_CLOCK));
     }
 
     @Test
-    void resolveXbName_nameNotEmpty() {
-        XircuitB xircuitB = mock(XircuitB.class);
-        when(xircuitB.name()).thenReturn("XB");
-        assertEquals("XB", factory.resolveXbName(
-                null,
-                xircuitB,
-                0));
-    }
-
-    @Test
-    void resolveXbName_nameEmpty() throws NoSuchMethodException {
-        assertEquals("SimpleXb.singleXb#f279a7c9_1", factory.resolveXbName(
-                Fixture.SimpleXb.class.getMethod("singleXb"),
-                Fixture.SimpleXb.class.getMethod("singleXb").getAnnotation(XircuitB.class),
-                1));
-    }
-
-    @Test
-    void resolveConfig_defineExceptionsAndActiveDayInline() throws NoSuchMethodException {
+    void resolveConfig_defineExceptionsAndActiveDayInline() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.SimpleXb.class.getMethod("exceptionsAndActiveDaysInline").getAnnotation(XircuitB.class);
-        XircuitBConfigModel actual = factory.resolveConfig(xb);
+        XircuitBConfigModel actual = configFactory.resolveConfig(xb, ctx);
 
-        assertEquals(1, actual.getActiveDays().length);
+        assertEquals(1, actual.getActiveSchedule().periods().getFirst().activeDays().size());
         assertEquals(Exception.class, actual.getExceptionsToCatch()[0]);
     }
 
     @Test
-    void resolveConfig_exceptionsAndActiveDayDefaultConfig() throws NoSuchMethodException {
+    void resolveConfig_exceptionsAndActiveDayDefaultConfig() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.SimpleXb.class.getMethod("singleXb").getAnnotation(XircuitB.class);
         when(defaultConf.getSlidingWindowType()).thenReturn("COUNT_BASED");
         when(defaultConf.getSlidingWindowSize()).thenReturn(100);
@@ -116,22 +123,70 @@ class XircuitBConfigFactoryTest {
         when(defaultConf.getExceptionsToCatch()).thenReturn(new String[]{"java.lang.Exception"});
         when(defaultConf.getActiveDays()).thenReturn(new String[]{"SUNDAY", "MONDAY"});
 
-        XircuitBConfigModel actual = factory.resolveConfig(xb);
+        XircuitBConfigModel actual = configFactory.resolveConfig(xb, ctx);
 
-        assertEquals(2, actual.getActiveDays().length);
+
+        assertEquals(2, actual.getActiveSchedule().periods().getFirst().activeDays().size());
         assertEquals(Exception.class, actual.getExceptionsToCatch()[0]);
     }
 
     @Test
-    void resolveConfig_configConfigProvider() throws NoSuchMethodException {
+    void resolveConfig_configProvider() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.ConfigProvider.class.getMethod("configProvider").getAnnotation(XircuitB.class);
-        when(ctx.getBean(MockConfigProvider.class)).thenReturn(new MockConfigProvider());
-        XircuitBConfigModel config = factory.resolveConfig(xb);
+        when(appCtx.getBean(MockConfigProvider.class)).thenReturn(new MockConfigProvider());
+        XircuitBConfigModel config = configFactory.resolveConfig(xb, ctx);
 
         assertEquals(50, config.getFailureRateThreshold());
         assertEquals(100, config.getSlidingWindowSize());
         assertEquals("COUNT_BASED", config.getSlidingWindowType());
         assertEquals(10, config.getNumCallHalfOpen());
+    }
+
+    @Test
+    void resolveConfig_exception() throws NoSuchMethodException, ResiliXException {
+        XircuitB xb = Fixture.SimpleXb.class.getMethod("singleXb").getAnnotation(XircuitB.class);
+        when(defaultConf.getSlidingWindowType()).thenReturn("COUNT_BASED");
+        when(defaultConf.getSlidingWindowSize()).thenReturn(100);
+        when(defaultConf.getActiveFrom()).thenReturn("09:00");
+        when(defaultConf.getActiveTo()).thenReturn("19:00");
+        when(defaultConf.getExceptionsToCatch()).thenReturn(new String[]{"java.lang.test"});
+        when(defaultConf.getActiveDays()).thenReturn(new String[]{"SUNDAY", "MONDAY"});
+
+        XircuitBConfigurationException actual = assertThrows(XircuitBConfigurationException.class, () -> configFactory.resolveConfig(xb, ctx));
+
+        assertEquals("Exception class is not a valid exception: java.lang.test", actual.getMessage());
+    }
+
+    @Test
+    void resolveConfig_configTemplateNotRegistered_throw() throws NoSuchMethodException {
+        XircuitB xb = Fixture.ConfigProvider.class.getMethod("configTemplate").getAnnotation(XircuitB.class);
+        when(configRegistry.get(anyString())).thenReturn(null);
+        XircuitBConfigurationException actual = assertThrows(XircuitBConfigurationException.class, () -> configFactory.resolveConfig(xb, ctx));
+        assertEquals("XircuitB config template 'test' was referenced but not registered", actual.getMessage());
+    }
+
+    @Test
+    void resolveConfig_configTemplate() throws NoSuchMethodException {
+        XircuitB xb = Fixture.ConfigProvider.class.getMethod("configTemplate").getAnnotation(XircuitB.class);
+        when(configRegistry.get(anyString())).thenReturn(createXircuitBConfigModel());
+        XircuitBConfigModel actual = configFactory.resolveConfig(xb, ctx);
+        assertEquals(100, actual.getSlidingWindowSize());
+    }
+
+    @Test
+    void resolveFallback_fallbackTemplateNotRegistered_throw() throws NoSuchMethodException {
+        XircuitB xb = Fixture.FallbackProvider.class.getMethod("fallbackTemplate").getAnnotation(XircuitB.class);
+        when(fallbackRegistry.get(anyString())).thenReturn(null);
+        XircuitBConfigurationException actual = assertThrows(XircuitBConfigurationException.class, () -> configFactory.resolveFallback(xb, ctx));
+        assertEquals("XircuitB fallback template 'test' was referenced but not registered", actual.getMessage());
+    }
+
+    @Test
+    void resolveFallback_fallbackTemplate() throws NoSuchMethodException {
+        XircuitB xb = Fixture.FallbackProvider.class.getMethod("fallbackTemplate").getAnnotation(XircuitB.class);
+        when(fallbackRegistry.get(anyString())).thenReturn(new MockFallbackProviderSync());
+        XircuitBFallbackProvider actual = configFactory.resolveFallback(xb, ctx);
+        assertNotNull(actual);
     }
 
 }

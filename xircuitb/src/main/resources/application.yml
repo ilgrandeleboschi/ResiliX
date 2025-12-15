@@ -1,11 +1,20 @@
 default-xircuitb:
-  slidingWindowSize: ${CB_SLIDING_WINDOW_SIZE:100}
-  minNumberOfCalls: ${CB_MIN_NUM_CALLS:10}
-  failureRateThreshold: ${CB_FAILURE_RATE_THRESHOLD:50}
-  waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN_STATE:5000}
-  numCallHalfOpen: ${CB_NUM_CALL_HALF_OPEN:10}
-  exceptionsToCatch: ${CB_EXCEPTIONS_TO_CATCH:java.lang.Exception}
-  slidingWindowType: ${CB_SLIDING_WINDOW_TYPE:COUNT_BASED}
-  activeFrom: ${CB_ACTIVE_FROM:00:00}
-  activeTo: ${CB_ACTIVE_TO:23:59}
-  activeDays: ${CB_ACTIVE_DAYS:}
+  slidingWindowSize: ${XB_SLIDING_WINDOW_SIZE:100}
+  minNumberOfCalls: ${XB_MIN_NUM_CALLS:10}
+  failureRateThreshold: ${XB_FAILURE_RATE_THRESHOLD:50}
+  waitDurationInOpenState: ${XB_WAIT_DURATION_OPEN_STATE:5000}
+  numCallHalfOpen: ${XB_NUM_CALL_HALF_OPEN:10}
+  exceptionsToCatch: ${XB_EXCEPTIONS_TO_CATCH:java.lang.Exception}
+  fallbackProvider: ${XB_FALLBACK_PROVIDER:io.xircuitb.provider.defaults.VoidXircuitBFallbackProvider}
+  slidingWindowType: ${XB_SLIDING_WINDOW_TYPE:COUNT_BASED}
+  activeFrom: ${XB_ACTIVE_FROM:"00:00"}
+  activeTo: ${XB_ACTIVE_TO:"23:59"}
+  activeDays: ${XB_ACTIVE_DAYS:}
+  # in case of advanced period configuration
+  #activePeriods:
+  #  - from: "09:00"
+  #    to: "18:00"
+  #    days: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY ]
+  #  - from: "09:00"
+  #    to: "13:00"
+  #    days: [ SATURDAY ]

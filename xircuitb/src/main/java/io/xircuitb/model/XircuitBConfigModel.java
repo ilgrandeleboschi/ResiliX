@@ -1,11 +1,10 @@
 package io.xircuitb.model;
 
+import io.resilix.model.ActiveSchedule;
+import io.xircuitb.provider.XircuitBFallbackProvider;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.DayOfWeek;
-import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -18,9 +17,9 @@ public class XircuitBConfigModel {
     private int minNumberOfCalls;
     private long waitDurationInOpenState;
     private int numCallHalfOpen;
-    private LocalTime activeFrom;
-    private LocalTime activeTo;
-    private DayOfWeek[] activeDays;
     private Class<? extends Throwable>[] exceptionsToCatch;
+    private XircuitBFallbackProvider fallbackProvider;
+    @Builder.Default
+    private ActiveSchedule activeSchedule = ActiveSchedule.alwaysOn();
 
 }

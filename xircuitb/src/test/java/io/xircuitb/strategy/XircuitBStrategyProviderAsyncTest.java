@@ -6,14 +6,16 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
+import io.xircuitb.factory.XircuitBNameFactory;
 import io.xircuitb.model.XircuitBCacheModel;
+import io.xircuitb.monitor.XircuitBMonitor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import utils.Fixture;
-import utils.MockFallbackProviderAsync;
+import util.Fixture;
 
 import java.lang.reflect.Method;
 import java.time.Clock;
@@ -25,7 +27,6 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
@@ -33,17 +34,23 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static utils.MockBuilder.FIXED_CLOCK;
-import static utils.MockBuilder.createResiliXContext;
-import static utils.MockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.FIXED_CLOCK;
+import static util.XircuitBMockBuilder.createResiliXContext;
+import static util.XircuitBMockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.createXircuitBConfigModelWithAsyncFallback;
+import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBStrategyProviderAsyncTest {
 
     @Mock
+    XircuitBConfigFactory configFactory;
+    @Mock
+    XircuitBNameFactory nameFactory;
+    @Mock
     CircuitBreakerRegistry registry;
     @Mock
-    XircuitBConfigFactory factory;
+    XircuitBMonitor monitor;
 
     Clock clock = FIXED_CLOCK;
 
@@ -51,8 +58,8 @@ class XircuitBStrategyProviderAsyncTest {
 
     @BeforeEach
     void setUp() {
-        strategy = new XircuitBStrategyProviderAsync(registry, factory, clock);
-        when(factory.resolveXbName(any(), any(), anyInt())).thenReturn("test");
+        strategy = new XircuitBStrategyProviderAsync(clock, configFactory, nameFactory, registry, monitor);
+        when(nameFactory.resolveName(any(), any(), anyInt())).thenReturn("test");
     }
 
     @Test
@@ -60,7 +67,7 @@ class XircuitBStrategyProviderAsyncTest {
         Method method = Fixture.SimpleXb.class.getMethod("singleXb");
         Fixture.SimpleXb instance = new Fixture.SimpleXb();
 
-        assertTrue(strategy.support(method.getAnnotation(XircuitB.class)));
+        assertEquals(XircuitB.class, strategy.support());
         assertEquals(0, strategy.priority());
 
         Supplier<CompletionStage<Object>> original = () -> CompletableFuture.supplyAsync(() -> {
@@ -70,8 +77,15 @@ class XircuitBStrategyProviderAsyncTest {
                 throw new RuntimeException(e);
             }
         });
-        when(factory.resolveConfig(any())).thenReturn(createXircuitBConfigModel());
-        when(registry.circuitBreaker(anyString(), any(CircuitBreakerConfig.class))).thenReturn(mock(CircuitBreaker.class));
+        when(configFactory.resolveConfig(any(), any())).thenReturn(createXircuitBConfigModel());
+        CircuitBreaker cbMock = mock(CircuitBreaker.class);
+        when(cbMock.executeCompletionStage(any()))
+                .thenAnswer(invocation -> {
+                    Supplier<CompletionStage<Object>> supplier =
+                            invocation.getArgument(0);
+                    return supplier.get();
+                });
+        when(registry.circuitBreaker(any(), ArgumentMatchers.<Supplier<CircuitBreakerConfig>>any())).thenReturn(cbMock);
 
         Supplier<CompletionStage<Object>> wrapped = strategy.decorate(original, createResiliXContext(method));
 
@@ -85,8 +99,8 @@ class XircuitBStrategyProviderAsyncTest {
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderAsync());
-        doReturn(cache).when(spy).computeCache(anyString(), any());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModelWithAsyncFallback(), defaultResiliXContext());
+        doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(mock(CallNotPermittedException.class)));
 
@@ -103,8 +117,8 @@ class XircuitBStrategyProviderAsyncTest {
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderAsync());
-        doReturn(cache).when(spy).computeCache(anyString(), any());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), defaultResiliXContext());
+        doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         Exception e = new Exception("Regular exception");
         when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(e));

@@ -1,16 +1,7 @@
 package io.xircuitb.model;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.xircuitb.provider.XircuitBFallbackProvider;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import io.resilix.model.ResiliXContext;
 
-@Getter
-@AllArgsConstructor
-public class XircuitBCacheModel {
-
-    private CircuitBreaker cb;
-    private XircuitBConfigModel config;
-    private XircuitBFallbackProvider fallback;
-
+public record XircuitBCacheModel(CircuitBreaker cb, XircuitBConfigModel config, ResiliXContext ctx) {
 }

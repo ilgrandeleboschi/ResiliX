@@ -1,121 +1,164 @@
 package io.xircuitb.factory;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.micrometer.common.util.StringUtils;
+import io.resilix.exception.ResiliXException;
+import io.resilix.factory.ResiliXConfigFactory;
+import io.resilix.model.ActivePeriod;
+import io.resilix.model.ActiveSchedule;
+import io.resilix.model.ResiliXContext;
 import io.xircuitb.annotation.XircuitB;
+import io.xircuitb.exception.XircuitBConfigurationException;
+import io.xircuitb.model.ActivePeriodConfig;
 import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
+import io.xircuitb.provider.XircuitBConfigProvider;
 import io.xircuitb.provider.XircuitBFallbackProvider;
-import io.xircuitb.provider.defaults.VoidConfigProvider;
-import io.xircuitb.provider.defaults.VoidFallbackProvider;
+import io.xircuitb.provider.defaults.VoidXircuitBConfigProvider;
+import io.xircuitb.provider.defaults.VoidXircuitBFallbackProvider;
+import io.xircuitb.registry.XircuitBConfigRegistry;
+import io.xircuitb.registry.XircuitBFallbackRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
+import java.time.Clock;
 import java.time.Duration;
 
-import static io.xircuitb.utils.XircuitBUtils.getOrDefault;
-import static io.xircuitb.validator.XircuitBValidator.validateAndConvertDays;
-import static io.xircuitb.validator.XircuitBValidator.validateAndConvertExceptions;
-import static io.xircuitb.validator.XircuitBValidator.validateAndConvertTime;
-import static io.xircuitb.validator.XircuitBValidator.validateFallbackClass;
+import static io.resilix.model.ActivePeriod.buildActivePeriod;
+import static io.resilix.util.ResiliXUtils.fmt;
+import static io.resilix.validator.ResiliXValidator.getBean;
+import static io.resilix.validator.ResiliXValidator.validateAndConvertClass;
+import static io.resilix.validator.ResiliXValidator.validateAndConvertDays;
+import static io.resilix.validator.ResiliXValidator.validateAndConvertExceptions;
+import static org.apache.logging.log4j.util.Strings.isNotBlank;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class XircuitBConfigFactory {
+public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, XircuitBConfigModel, XircuitBFallbackProvider> {
 
-    private final ApplicationContext ctx;
+    private final ApplicationContext appCtx;
+    private final XircuitBConfigRegistry configRegistry;
+    private final XircuitBFallbackRegistry fallbackRegistry;
     private final XircuitBDefaultPropertiesModel defaultConf;
 
-    public XircuitBConfigModel resolveConfig(XircuitB xb) {
-        return xb.configProvider() != VoidConfigProvider.class ? fromProvider(xb) : buildXircuitBConfigModel(xb);
+    @Override
+    public XircuitBConfigModel resolveConfig(XircuitB xb, ResiliXContext ctx) {
+        if (!StringUtils.isBlank(xb.configTemplate())) {
+            XircuitBConfigModel configModel = configRegistry.get(xb.configTemplate());
+            if (configModel == null)
+                throw new XircuitBConfigurationException(fmt("XircuitB config template '%s' was referenced but not registered", xb.configTemplate()));
+            return merge(configModel, fromAnnotation(xb, ctx));
+        }
+        return xb.configProvider() != VoidXircuitBConfigProvider.class ?
+                merge(fromProvider(xb.configProvider()), fromAnnotation(xb, ctx)) :
+                merge(fromDefault(ctx), fromAnnotation(xb, ctx));
     }
 
-    public XircuitBFallbackProvider resolveFallback(Class<? extends XircuitBFallbackProvider> fallback) {
-        if (fallback == VoidFallbackProvider.class) return null;
+    @Override
+    public XircuitBFallbackProvider resolveFallback(XircuitB xb, ResiliXContext ctx) {
+        if (!StringUtils.isBlank(xb.fallbackTemplate())) {
+            XircuitBFallbackProvider fallbackProvider = fallbackRegistry.get(xb.fallbackTemplate());
+            if (fallbackProvider == null)
+                throw new XircuitBConfigurationException(fmt("XircuitB fallback template '%s' was referenced but not registered", xb.fallbackTemplate()));
+            return fallbackProvider;
+        }
+        if (xb.fallbackProvider() == VoidXircuitBFallbackProvider.class) return null;
         try {
-            XircuitBFallbackProvider bean = ctx.getBean(fallback);
-            validateFallbackClass(bean, XircuitBFallbackProvider.class);
-            return bean;
+            return appCtx.getBean(xb.fallbackProvider());
         } catch (NoSuchBeanDefinitionException e) {
-            log.warn("Fallback class {} is not a Spring bean. XircuitB will skip fallback behavior", fallback.getSimpleName(), e);
-            return null;
+            throw new XircuitBConfigurationException(fmt("Fallback class %s is not a Spring bean", xb.fallbackProvider().getSimpleName()));
         }
     }
 
-    private XircuitBConfigModel fromProvider(XircuitB xb) {
-        return ctx.getBean(xb.configProvider()).apply();
-    }
-
-    private XircuitBConfigModel buildXircuitBConfigModel(XircuitB xb) {
+    @Override
+    public XircuitBConfigModel fromAnnotation(XircuitB xb, ResiliXContext ctx) throws ResiliXException {
         return XircuitBConfigModel.builder()
-                .slidingWindowType(getOrDefault(
-                        xb.slidingWindowType(),
-                        defaultConf.getSlidingWindowType(),
-                        String::isBlank))
-                .waitDurationInOpenState(getOrDefault(
-                        xb.waitDurationInOpenState(),
-                        defaultConf.getWaitDurationInOpenState(),
-                        i -> i < 1))
-                .slidingWindowSize(getOrDefault(
-                        xb.slidingWindowSize(),
-                        defaultConf.getSlidingWindowSize(),
-                        i -> i < 1))
-                .minNumberOfCalls(getOrDefault(
-                        xb.minNumberOfCalls(),
-                        defaultConf.getMinNumberOfCalls(),
-                        i -> i < 1))
-                .numCallHalfOpen(getOrDefault(
-                        xb.numCallHalfOpen(),
-                        defaultConf.getNumCallHalfOpen(),
-                        i -> i < 1))
-                .failureRateThreshold(getOrDefault(
-                        xb.failureRateThreshold(),
-                        defaultConf.getFailureRateThreshold(),
-                        i -> i < 1))
-                .activeFrom(validateAndConvertTime(
-                        getOrDefault(
-                                xb.activeFrom(),
-                                defaultConf.getActiveFrom(),
-                                String::isBlank)))
-                .activeTo(validateAndConvertTime(
-                        getOrDefault(
-                                xb.activeTo(),
-                                defaultConf.getActiveTo(),
-                                String::isBlank)))
-                .activeDays(xb.activeDays().length == 0 ?
-                        validateAndConvertDays(defaultConf.getActiveDays()) :
-                        xb.activeDays())
-                .exceptionsToCatch(xb.exceptionsToCatch().length == 0 ?
-                        validateAndConvertExceptions(defaultConf.getExceptionsToCatch()) :
-                        xb.exceptionsToCatch())
+                .slidingWindowType(xb.slidingWindowType())
+                .waitDurationInOpenState(xb.waitDurationInOpenState())
+                .slidingWindowSize(xb.slidingWindowSize())
+                .minNumberOfCalls(xb.minNumberOfCalls())
+                .numCallHalfOpen(xb.numCallHalfOpen())
+                .failureRateThreshold(xb.failureRateThreshold())
+                .exceptionsToCatch(xb.exceptionsToCatch())
+                .fallbackProvider(resolveFallback(xb, ctx))
+                .activeSchedule(ActiveSchedule.of(buildActivePeriod(xb.activeFrom(), xb.activeTo(), xb.activeDays())))
                 .build();
     }
 
-    public CircuitBreakerConfig buildCircuitBreakerConfig(XircuitBConfigModel xircuitBConfigModel) {
-        return xircuitBConfigModel == null ? null :
+    @Override
+    public XircuitBConfigModel fromDefault(ResiliXContext ctx) {
+        try {
+            Class<? extends XircuitBFallbackProvider> clazz = validateAndConvertClass(defaultConf.getFallbackProvider(), XircuitBFallbackProvider.class);
+            XircuitBFallbackProvider fallback = clazz == VoidXircuitBFallbackProvider.class ? null : getBean(appCtx, clazz);
+
+            return XircuitBConfigModel.builder()
+                    .slidingWindowType(defaultConf.getSlidingWindowType())
+                    .slidingWindowSize(defaultConf.getSlidingWindowSize())
+                    .failureRateThreshold(defaultConf.getFailureRateThreshold())
+                    .minNumberOfCalls(defaultConf.getMinNumberOfCalls())
+                    .waitDurationInOpenState(defaultConf.getWaitDurationInOpenState())
+                    .numCallHalfOpen(defaultConf.getNumCallHalfOpen())
+                    .activeSchedule(resolveActiveSchedule(defaultConf))
+                    .exceptionsToCatch(validateAndConvertExceptions(defaultConf.getExceptionsToCatch()))
+                    .fallbackProvider(fallback)
+                    .build();
+        } catch (ResiliXException e) {
+            throw new XircuitBConfigurationException(e.getMessage());
+        }
+    }
+
+    @Override
+    public XircuitBConfigModel merge(XircuitBConfigModel base, XircuitBConfigModel override) {
+        if (override == null) return base;
+        return XircuitBConfigModel.builder()
+                .slidingWindowType(isNotBlank(override.getSlidingWindowType()) ? override.getSlidingWindowType() : base.getSlidingWindowType())
+                .slidingWindowSize(override.getSlidingWindowSize() > 0 ? override.getSlidingWindowSize() : base.getSlidingWindowSize())
+                .failureRateThreshold(override.getFailureRateThreshold() > 0 ? override.getFailureRateThreshold() : base.getFailureRateThreshold())
+                .minNumberOfCalls(override.getMinNumberOfCalls() > 0 ? override.getMinNumberOfCalls() : base.getMinNumberOfCalls())
+                .waitDurationInOpenState(override.getWaitDurationInOpenState() > 0 ? override.getWaitDurationInOpenState() : base.getWaitDurationInOpenState())
+                .numCallHalfOpen(override.getNumCallHalfOpen() > 0 ? override.getNumCallHalfOpen() : base.getNumCallHalfOpen())
+                .exceptionsToCatch((override.getExceptionsToCatch() != null && override.getExceptionsToCatch().length > 0) ? override.getExceptionsToCatch() : base.getExceptionsToCatch())
+                .activeSchedule(override.getActiveSchedule() != null && !override.getActiveSchedule().isEmpty() ? override.getActiveSchedule() : base.getActiveSchedule())
+                .fallbackProvider(override.getFallbackProvider() != null ? override.getFallbackProvider() : base.getFallbackProvider())
+                .build();
+    }
+
+    private XircuitBConfigModel fromProvider(Class<? extends XircuitBConfigProvider> config) {
+        return appCtx.getBean(config).get();
+    }
+
+    public CircuitBreakerConfig buildCircuitBreakerConfig(XircuitBConfigModel cfg, Clock clock) {
+        return cfg == null ? null :
                 CircuitBreakerConfig.custom()
-                        .slidingWindowSize(xircuitBConfigModel.getSlidingWindowSize())
-                        .failureRateThreshold(xircuitBConfigModel.getFailureRateThreshold())
-                        .minimumNumberOfCalls(xircuitBConfigModel.getMinNumberOfCalls())
-                        .permittedNumberOfCallsInHalfOpenState(xircuitBConfigModel.getNumCallHalfOpen())
-                        .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.valueOf(xircuitBConfigModel.getSlidingWindowType()))
-                        .waitDurationInOpenState(Duration.ofMillis(xircuitBConfigModel.getWaitDurationInOpenState()))
-                        .recordExceptions(xircuitBConfigModel.getExceptionsToCatch())
+                        .slidingWindowSize(cfg.getSlidingWindowSize())
+                        .failureRateThreshold(cfg.getFailureRateThreshold())
+                        .minimumNumberOfCalls(cfg.getMinNumberOfCalls())
+                        .permittedNumberOfCallsInHalfOpenState(cfg.getNumCallHalfOpen())
+                        .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.valueOf(cfg.getSlidingWindowType()))
+                        .waitDurationInOpenState(Duration.ofMillis(cfg.getWaitDurationInOpenState()))
+                        .recordExceptions(cfg.getExceptionsToCatch())
+                        .clock(clock)
                         .build();
     }
 
-    public String resolveXbName(Method method, XircuitB xb, int index) {
-        if (!xb.name().isEmpty()) {
-            return xb.name();
+    private ActiveSchedule resolveActiveSchedule(XircuitBDefaultPropertiesModel def) {
+        if (def.getActivePeriods() != null && !def.getActivePeriods().isEmpty()) {
+            return new ActiveSchedule(def.getActivePeriods().stream()
+                    .map(ActivePeriodConfig::toActivePeriod)
+                    .toList());
         }
 
-        String base = method.getDeclaringClass().getSimpleName() + "." + method.getName();
-        String sigHash = Integer.toHexString(method.toGenericString().hashCode());
-        return base + "#" + sigHash + "_" + index;
+        ActivePeriod period = buildActivePeriod(
+                def.getActiveFrom(),
+                def.getActiveTo(),
+                validateAndConvertDays(def.getActiveDays())
+        );
+
+        return ActiveSchedule.of(period);
     }
 
 }

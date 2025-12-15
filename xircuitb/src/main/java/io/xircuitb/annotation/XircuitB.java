@@ -2,8 +2,8 @@ package io.xircuitb.annotation;
 
 import io.xircuitb.provider.XircuitBConfigProvider;
 import io.xircuitb.provider.XircuitBFallbackProvider;
-import io.xircuitb.provider.defaults.VoidConfigProvider;
-import io.xircuitb.provider.defaults.VoidFallbackProvider;
+import io.xircuitb.provider.defaults.VoidXircuitBConfigProvider;
+import io.xircuitb.provider.defaults.VoidXircuitBFallbackProvider;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -12,9 +12,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.time.DayOfWeek;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
+@Target(ElementType.METHOD)
 @Repeatable(XircuitBs.class)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface XircuitB {
 
     String name() default "";
@@ -37,9 +37,13 @@ public @interface XircuitB {
 
     DayOfWeek[] activeDays() default {};
 
-    Class<? extends XircuitBConfigProvider> configProvider() default VoidConfigProvider.class;
+    Class<? extends XircuitBConfigProvider> configProvider() default VoidXircuitBConfigProvider.class;
 
-    Class<? extends XircuitBFallbackProvider> fallbackProvider() default VoidFallbackProvider.class;
+    Class<? extends XircuitBFallbackProvider> fallbackProvider() default VoidXircuitBFallbackProvider.class;
 
-    Class<? extends Throwable>[] exceptionsToCatch() default {};
+    String configTemplate() default "";
+
+    String fallbackTemplate() default "";
+
+    Class<? extends Throwable>[] exceptionsToCatch() default {Exception.class};
 }

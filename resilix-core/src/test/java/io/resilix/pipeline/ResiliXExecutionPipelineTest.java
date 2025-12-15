@@ -5,12 +5,13 @@ import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategyAsync;
 import io.resilix.strategy.ResiliXStrategySync;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import util.Dummy;
+import util.DummyAnn;
 
-import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -22,87 +23,83 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static util.ContextBuilder.getContext;
 
 class ResiliXExecutionPipelineTest {
 
+    ResiliXContext syncContext;
+    ResiliXContext asyncContext;
+
+    @BeforeEach
+    void setUp() throws NoSuchMethodException {
+        syncContext = getContext(Dummy.class.getMethod("syncMethod"));
+        asyncContext = getContext(Dummy.class.getMethod("asyncMethod"));
+    }
+
     @Test
     void execute_withSyncStrategy_appliesStrategy() throws Throwable {
-        ResiliXStrategySync sync = mock(ResiliXStrategySync.class);
+        ResiliXStrategySync<DummyAnn, Object, Object> sync = mock(ResiliXStrategySync.class);
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-        Method dummyMethod = Object.class.getMethod("toString");
 
-        ResiliXStrategyPipeline composite = new ResiliXStrategyPipeline(List.of(sync));
-        ResiliXContext ctx = new ResiliXContext(dummyMethod, new Object[0], dummyMethod.getAnnotations(), Map.of());
+        ResiliXStrategyPipeline<DummyAnn, Object, Object> composite = new ResiliXStrategyPipeline<>(List.of(sync));
 
         when(pjp.proceed()).thenReturn("original");
-        when(sync.decorate(Mockito.<CheckedSupplier<Object>>any(), eq(ctx))).thenReturn(() -> "result");
+        when(sync.decorate(Mockito.<CheckedSupplier<Object>>any(), eq(syncContext))).thenReturn(() -> "result");
 
-        ResiliXExecutionPipeline pipeline = new ResiliXExecutionPipeline(composite);
-        Object result = pipeline.execute(pjp, ctx);
+        ResiliXExecutionPipeline<DummyAnn, Object, Object> pipeline = new ResiliXExecutionPipeline<>(composite);
+        Object result = pipeline.execute(pjp, syncContext);
 
         assertThat(result).isEqualTo("result");
-        verify(sync).decorate(Mockito.<CheckedSupplier<Object>>any(), eq(ctx));
+        verify(sync).decorate(Mockito.<CheckedSupplier<Object>>any(), eq(syncContext));
     }
 
     @Test
     void execute_withAsyncStrategy_appliesStrategy() throws Throwable {
-        ResiliXStrategyAsync async = mock(ResiliXStrategyAsync.class);
+        ResiliXStrategyAsync<DummyAnn, Object, Object> async = mock(ResiliXStrategyAsync.class);
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-        Method dummyMethod = AsyncDummy.class.getMethod("asyncMethod");
 
-        ResiliXStrategyPipeline composite = new ResiliXStrategyPipeline(List.of(async));
-        ResiliXContext ctx = new ResiliXContext(dummyMethod, new Object[0], dummyMethod.getAnnotations(), Map.of());
+        ResiliXStrategyPipeline<DummyAnn, Object, Object> composite = new ResiliXStrategyPipeline<>(List.of(async));
 
         Supplier<CompletionStage<Object>> original = () -> CompletableFuture.completedFuture("original");
         when(pjp.proceed()).thenReturn(original.get());
-        when(async.decorate(Mockito.<Supplier<CompletionStage<Object>>>any(), eq(ctx)))
+        when(async.decorate(Mockito.<Supplier<CompletionStage<Object>>>any(), eq(asyncContext)))
                 .thenAnswer(invocation -> (Supplier<CompletionStage<Object>>) () -> CompletableFuture.completedFuture("asyncResult"));
 
-        ResiliXExecutionPipeline pipeline = new ResiliXExecutionPipeline(composite);
-        Object result = pipeline.execute(pjp, ctx);
+        ResiliXExecutionPipeline<DummyAnn, Object, Object> pipeline = new ResiliXExecutionPipeline<>(composite);
+        Object result = pipeline.execute(pjp, asyncContext);
 
         CompletionStage<?> stage = (CompletionStage<?>) result;
         assertThat(stage.toCompletableFuture().get()).isEqualTo("asyncResult");
-        verify(async).decorate(Mockito.<Supplier<CompletionStage<Object>>>any(), eq(ctx));
+        verify(async).decorate(Mockito.<Supplier<CompletionStage<Object>>>any(), eq(asyncContext));
     }
 
     @Test
     void execute_withNoStrategies_returnsOriginal() throws Throwable {
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-        Method dummyMethod = Object.class.getMethod("toString");
-
-        ResiliXContext ctx = new ResiliXContext(dummyMethod, new Object[0], dummyMethod.getAnnotations(), Map.of());
 
         when(pjp.proceed()).thenReturn("ok");
 
-        ResiliXExecutionPipeline pipeline = new ResiliXExecutionPipeline(new ResiliXStrategyPipeline(List.of()));
-        Object result = pipeline.execute(pjp, ctx);
+        ResiliXExecutionPipeline<DummyAnn, Object, Object> pipeline = new ResiliXExecutionPipeline<>(new ResiliXStrategyPipeline<>(List.of()));
+        Object result = pipeline.execute(pjp, syncContext);
 
         assertThat(result).isEqualTo("ok");
     }
 
     @Test
     void execute_withSyncStrategy_throwError() throws Throwable {
-        ResiliXStrategySync sync = mock(ResiliXStrategySync.class);
+        ResiliXStrategySync<DummyAnn, Object, Object> sync = mock(ResiliXStrategySync.class);
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-        Method dummyMethod = Object.class.getMethod("toString");
 
-        ResiliXStrategyPipeline composite = new ResiliXStrategyPipeline(List.of(sync));
-        ResiliXContext ctx = new ResiliXContext(dummyMethod, new Object[0], dummyMethod.getAnnotations(), Map.of());
+        ResiliXStrategyPipeline<DummyAnn, Object, Object> composite = new ResiliXStrategyPipeline<>(List.of(sync));
 
         when(pjp.proceed()).thenReturn("original");
-        when(sync.decorate(Mockito.<CheckedSupplier<Object>>any(), eq(ctx))).thenThrow(new RuntimeException("onError"));
+        when(sync.decorate(Mockito.<CheckedSupplier<Object>>any(), eq(syncContext))).thenThrow(new RuntimeException("onError"));
 
-        ResiliXExecutionPipeline pipeline = new ResiliXExecutionPipeline(composite);
+        ResiliXExecutionPipeline<DummyAnn, Object, Object> pipeline = new ResiliXExecutionPipeline<>(composite);
 
-        RuntimeException e = assertThrows(RuntimeException.class, () -> pipeline.execute(pjp, ctx));
+        RuntimeException e = assertThrows(RuntimeException.class, () -> pipeline.execute(pjp, syncContext));
         assertEquals("onError", e.getMessage());
-        verify(sync).decorate(Mockito.<CheckedSupplier<Object>>any(), eq(ctx));
+        verify(sync).decorate(Mockito.<CheckedSupplier<Object>>any(), eq(syncContext));
     }
 
-    static class AsyncDummy {
-        public CompletionStage<String> asyncMethod() {
-            return CompletableFuture.completedFuture("ok");
-        }
-    }
 }

@@ -5,24 +5,28 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.core.functions.CheckedSupplier;
-import io.xircuitb.annotation.XircuitBs;
+import io.resilix.model.ResiliXContext;
+import io.xircuitb.annotation.XircuitB;
+import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.factory.XircuitBConfigFactory;
+import io.xircuitb.factory.XircuitBNameFactory;
 import io.xircuitb.model.XircuitBCacheModel;
+import io.xircuitb.monitor.XircuitBMonitor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import utils.Fixture;
-import utils.MockFallbackProviderSync;
+import util.Fixture;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.time.Clock;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -30,17 +34,22 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static utils.MockBuilder.FIXED_CLOCK;
-import static utils.MockBuilder.createResiliXContext;
-import static utils.MockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.FIXED_CLOCK;
+import static util.XircuitBMockBuilder.createResiliXContext;
+import static util.XircuitBMockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBStrategyProviderSyncTest {
 
     @Mock
+    XircuitBConfigFactory configFactory;
+    @Mock
+    XircuitBNameFactory nameFactory;
+    @Mock
     CircuitBreakerRegistry registry;
     @Mock
-    XircuitBConfigFactory factory;
+    XircuitBMonitor monitor;
 
     Clock clock = FIXED_CLOCK;
 
@@ -48,8 +57,8 @@ class XircuitBStrategyProviderSyncTest {
 
     @BeforeEach
     void setUp() {
-        strategy = new XircuitBStrategyProviderSync(registry, factory, clock);
-        when(factory.resolveXbName(any(), any(), anyInt())).thenReturn("test");
+        strategy = new XircuitBStrategyProviderSync(clock, configFactory, nameFactory, registry, monitor);
+        when(nameFactory.resolveName(any(), any(), anyInt())).thenReturn("test");
     }
 
     @Test
@@ -57,18 +66,39 @@ class XircuitBStrategyProviderSyncTest {
         Fixture.SimpleXb instance = new Fixture.SimpleXb();
         Method method = instance.getClass().getMethod("singleXb");
 
-        Annotation ann = mock(XircuitBs.class);
-        assertTrue(strategy.support(ann));
+        assertEquals(XircuitB.class, strategy.support());
         assertEquals(0, strategy.priority());
 
         CheckedSupplier<Object> original = () -> method.invoke(instance);
-        when(factory.resolveConfig(any())).thenReturn(createXircuitBConfigModel());
-        when(registry.circuitBreaker(anyString(), any(CircuitBreakerConfig.class))).thenReturn(mock(CircuitBreaker.class));
+        when(configFactory.resolveConfig(any(), any())).thenReturn(createXircuitBConfigModel());
+        CircuitBreaker cbMock = mock(CircuitBreaker.class);
+        when(cbMock.executeCheckedSupplier(any())).thenAnswer(invocation -> {
+            CheckedSupplier<?> supplier = invocation.getArgument(0);
+            return supplier.get();
+        });
+        when(registry.circuitBreaker(any(), ArgumentMatchers.<Supplier<CircuitBreakerConfig>>any())).thenReturn(cbMock);
 
         CheckedSupplier<Object> wrapped = strategy.decorate(original, createResiliXContext(method));
 
         Object result = wrapped.get();
         assertThat(result).isEqualTo("executed");
+    }
+
+    @Test
+    void apply_circuitBreakerCreationError_throw() throws Throwable {
+        Fixture.SimpleXb instance = new Fixture.SimpleXb();
+        Method method = instance.getClass().getMethod("singleXb");
+
+        assertEquals(XircuitB.class, strategy.support());
+        assertEquals(0, strategy.priority());
+
+        CheckedSupplier<Object> original = () -> method.invoke(instance);
+        when(configFactory.resolveConfig(any(), any())).thenReturn(createXircuitBConfigModel());
+        when(registry.circuitBreaker(any(), ArgumentMatchers.<Supplier<CircuitBreakerConfig>>any())).thenThrow(new NullPointerException("Error"));
+
+        ResiliXContext ctx = createResiliXContext(method);
+        XircuitBConfigurationException e = assertThrows(XircuitBConfigurationException.class, () -> strategy.decorate(original, ctx));
+        assertEquals("Error", e.getMessage());
     }
 
     @Test
@@ -79,8 +109,8 @@ class XircuitBStrategyProviderSyncTest {
 
         XircuitBStrategyProviderSync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), new MockFallbackProviderSync());
-        doReturn(cache).when(spy).computeCache(anyString(), any());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), defaultResiliXContext());
+        doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         when(cb.executeCheckedSupplier(any())).thenThrow(CallNotPermittedException.class);
 
@@ -89,16 +119,17 @@ class XircuitBStrategyProviderSyncTest {
     }
 
     @Test
-    void apply_failedConfiguration_returnBaseMethod() throws Throwable {
+    void apply_failedConfiguration_exception() throws Throwable {
         Fixture.SimpleXb instance = new Fixture.SimpleXb();
         Method method = instance.getClass().getMethod("singleXb");
         CheckedSupplier<Object> original = () -> method.invoke(instance);
 
-        when(factory.resolveConfig(any())).thenThrow(NullPointerException.class);
+        when(configFactory.resolveConfig(any(), any())).thenThrow(NullPointerException.class);
 
         XircuitBStrategyProviderSync spy = spy(strategy);
-        CheckedSupplier<Object> wrapped = spy.decorate(original, createResiliXContext(method));
-        assertEquals("executed", wrapped.get());
+        ResiliXContext ctx = createResiliXContext(method);
+        XircuitBConfigurationException e = assertThrows(XircuitBConfigurationException.class, () -> spy.decorate(original, ctx));
+        assertEquals("Failed to resolve configuration for singleXb", e.getMessage());
     }
 
 }

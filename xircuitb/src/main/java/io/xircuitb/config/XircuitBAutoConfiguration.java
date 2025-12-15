@@ -3,9 +3,15 @@ package io.xircuitb.config;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.resilix.pipeline.ResiliXAspect;
 import io.resilix.strategy.ResiliXStrategy;
+import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
+import io.xircuitb.factory.XircuitBNameFactory;
+import io.xircuitb.model.XircuitBCacheModel;
+import io.xircuitb.model.XircuitBConfigModel;
 import io.xircuitb.model.XircuitBDefaultPropertiesModel;
-import io.xircuitb.monitor.CircuitBreakerMonitor;
+import io.xircuitb.monitor.XircuitBMonitor;
+import io.xircuitb.registry.XircuitBConfigRegistry;
+import io.xircuitb.registry.XircuitBFallbackRegistry;
 import io.xircuitb.strategy.XircuitBStrategyProvider;
 import io.xircuitb.strategy.XircuitBStrategyProviderAsync;
 import io.xircuitb.strategy.XircuitBStrategyProviderSync;
@@ -26,48 +32,67 @@ public class XircuitBAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBConfigFactory xircuitBConfigFactory(XircuitBDefaultPropertiesModel defaultProperties, ApplicationContext ctx) {
-        return new XircuitBConfigFactory(ctx, defaultProperties);
+    public XircuitBConfigFactory xircuitBConfigFactory(ApplicationContext ctx, XircuitBConfigRegistry configRegistry, XircuitBFallbackRegistry fallbackRegistry, XircuitBDefaultPropertiesModel defaultProperties) {
+        return new XircuitBConfigFactory(ctx, configRegistry, fallbackRegistry, defaultProperties);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public CircuitBreakerMonitor circuitBreakerMonitor() {
-        return new CircuitBreakerMonitor();
+    public XircuitBNameFactory xircuitBNameFactory() {
+        return new XircuitBNameFactory();
     }
 
     @Bean
+    @ConditionalOnMissingBean
+    public XircuitBMonitor circuitBreakerMonitor() {
+        return new XircuitBMonitor();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(Clock.class)
     public Clock systemClock() {
         return Clock.systemDefaultZone();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBStrategyProvider xircuitBStrategyProvider(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
-        return new XircuitBStrategyProvider(registry, configFactory, clock);
+    public XircuitBStrategyProvider xircuitBStrategyProvider(Clock clock, XircuitBConfigFactory configFactory, XircuitBNameFactory nameFactory, CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
+        return new XircuitBStrategyProvider(clock, configFactory, nameFactory, registry, monitor);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBStrategyProviderSync xircuitBStrategyProviderSync(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
-        return new XircuitBStrategyProviderSync(registry, configFactory, clock);
+    public XircuitBConfigRegistry xircuitBConfigRegistry() {
+        return new XircuitBConfigRegistry();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBStrategyProviderAsync xircuitBStrategyProviderAsync(CircuitBreakerRegistry registry, XircuitBConfigFactory configFactory, Clock clock) {
-        return new XircuitBStrategyProviderAsync(registry, configFactory, clock);
+    public XircuitBFallbackRegistry xircuitBFallbackRegistry(ApplicationContext ctx) {
+        return new XircuitBFallbackRegistry(ctx);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public ResiliXAspect resilixAspect(List<ResiliXStrategy> providers) {
-        return new ResiliXAspect(providers);
+    public XircuitBStrategyProviderSync xircuitBStrategyProviderSync(Clock clock, XircuitBConfigFactory configFactory, XircuitBNameFactory nameFactory, CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
+        return new XircuitBStrategyProviderSync(clock, configFactory, nameFactory, registry, monitor);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBMonitorConfig xircuitBMonitorConfig(CircuitBreakerRegistry registry, CircuitBreakerMonitor monitor) {
+    public XircuitBStrategyProviderAsync xircuitBStrategyProviderAsync(Clock clock, XircuitBConfigFactory configFactory, XircuitBNameFactory nameFactory, CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
+        return new XircuitBStrategyProviderAsync(clock, configFactory, nameFactory, registry, monitor);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ResiliXAspect<XircuitB, XircuitBConfigModel, XircuitBCacheModel> resilixAspect(List<ResiliXStrategy<XircuitB, XircuitBConfigModel, XircuitBCacheModel>> providers) {
+        return new ResiliXAspect<>(providers);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public XircuitBMonitorConfig xircuitBMonitorConfig(CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
         return new XircuitBMonitorConfig(registry, monitor);
     }
 

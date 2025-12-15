@@ -1,11 +1,13 @@
 package io.resilix.pipeline;
 
-import io.resilix.strategy.ResiliXStrategyAsync;
-import io.resilix.strategy.ResiliXStrategySync;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import util.Dummy;
+import util.DummyAnn;
+import util.DummyStrategyAsync;
+import util.DummyStrategySync;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -13,27 +15,17 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ResiliXAspectTest {
 
-    private ResiliXAspect aspect;
+    private ResiliXAspect<DummyAnn, Object, Object> aspect;
 
     @BeforeEach
     void setUp() {
-        ResiliXStrategySync syncStrategy = mock(ResiliXStrategySync.class);
-        ResiliXStrategyAsync asyncStrategy = mock(ResiliXStrategyAsync.class);
-
-        when(syncStrategy.priority()).thenReturn(1);
-        when(asyncStrategy.priority()).thenReturn(1);
-
-        when(syncStrategy.support(any())).thenReturn(true);
-        when(asyncStrategy.support(any())).thenReturn(true);
-
-        aspect = new ResiliXAspect(List.of(syncStrategy, asyncStrategy));
+        aspect = new ResiliXAspect<>(List.of(new DummyStrategySync(), new DummyStrategyAsync()));
     }
 
     @Test
@@ -89,13 +81,4 @@ class ResiliXAspectTest {
         assertThrows(RuntimeException.class, future::join);
     }
 
-    static class Dummy {
-        public String syncMethod() {
-            return "ok";
-        }
-
-        public CompletableFuture<String> asyncMethod() {
-            return CompletableFuture.completedFuture("ok");
-        }
-    }
 }

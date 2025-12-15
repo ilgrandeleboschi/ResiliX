@@ -1,21 +1,16 @@
 package io.xircuitb.provider;
 
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.resilix.provider.ResiliXFallbackProvider;
 
 /**
  * Internal base interface for fallback providers.
  * Do not implement directly. Implement only Sync or Async versions.
  */
-public interface XircuitBFallbackProvider {
+public interface XircuitBFallbackProvider extends ResiliXFallbackProvider {
 
-    default void logOperCircuit(String xbName, CallNotPermittedException cause) {
+    @Override
+    default void log(String xbName, Throwable cause) {
         getLogger().warn("Circuit open for xb {}", xbName, cause);
-    }
-
-    default Logger getLogger() {
-        return LoggerFactory.getLogger(this.getClass());
     }
 
 }

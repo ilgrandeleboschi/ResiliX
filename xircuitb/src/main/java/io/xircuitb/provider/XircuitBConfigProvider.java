@@ -1,10 +1,11 @@
 package io.xircuitb.provider;
 
+import io.resilix.provider.ResiliXConfigProvider;
 import io.xircuitb.model.XircuitBConfigModel;
 
-@FunctionalInterface
-public interface XircuitBConfigProvider {
+public interface XircuitBConfigProvider extends ResiliXConfigProvider<XircuitBConfigModel> {
 
-    XircuitBConfigModel apply();
+    @Override
+    XircuitBConfigModel get();
 
 }

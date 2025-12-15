@@ -10,7 +10,7 @@ public interface XircuitBFallbackProviderAsync extends XircuitBFallbackProvider 
     CompletionStage<Object> apply(CallNotPermittedException cause);
 
     default CompletionStage<Object> returnFallbackModel(String xbName, CompletionStage<Object> model, CallNotPermittedException cause) {
-        logOperCircuit(xbName, cause);
+        log(xbName, cause);
         return model;
     }
 

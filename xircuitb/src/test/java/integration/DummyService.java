@@ -1,13 +1,11 @@
 package integration;
 
 import io.xircuitb.annotation.XircuitB;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import utils.MockConfigProvider;
+import util.MockConfigProvider;
 
 import java.time.DayOfWeek;
 
-@Slf4j
 @Service
 public class DummyService {
 

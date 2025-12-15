@@ -8,40 +8,44 @@ import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategySync;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
+import io.xircuitb.factory.XircuitBNameFactory;
 import io.xircuitb.model.XircuitBCacheModel;
+import io.xircuitb.model.XircuitBConfigModel;
+import io.xircuitb.monitor.XircuitBMonitor;
 import io.xircuitb.provider.XircuitBFallbackProviderSync;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
 import java.time.Clock;
+import java.util.List;
 
 @Component
-public class XircuitBStrategyProviderSync extends XircuitBStrategyProvider implements ResiliXStrategySync {
+public class XircuitBStrategyProviderSync extends XircuitBStrategyProvider implements ResiliXStrategySync<XircuitB, XircuitBConfigModel, XircuitBCacheModel> {
 
     @Autowired
-    public XircuitBStrategyProviderSync(CircuitBreakerRegistry registry, XircuitBConfigFactory factory, Clock clock) {
-        super(registry, factory, clock);
+    public XircuitBStrategyProviderSync(Clock clock, XircuitBConfigFactory configFactory, XircuitBNameFactory nameFactory, CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
+        super(clock, configFactory, nameFactory, registry, monitor);
     }
 
     @Override
     public CheckedSupplier<Object> decorate(CheckedSupplier<Object> checkedSupplier, ResiliXContext ctx) {
-        return applyCircuitBreakersSync(getXBS(ctx.getMethod()), ctx.getMethod(), checkedSupplier);
+        return applyCircuitBreakersSync(extractAnnotations(ctx, XircuitB.class), checkedSupplier, ctx);
     }
 
-    private CheckedSupplier<Object> applyCircuitBreakersSync(XircuitB[] xBs, Method method, CheckedSupplier<Object> execution) {
+    private CheckedSupplier<Object> applyCircuitBreakersSync(List<XircuitB> xbs, CheckedSupplier<Object> execution, ResiliXContext ctx) {
         CheckedSupplier<Object> wrapped = execution;
+        int index = 0;
 
-        for (int i = 0; i < xBs.length; i++) {
-            XircuitB xB = xBs[i];
-            String xbName = getXbName(method, xB, i + 1);
-            XircuitBCacheModel cache = computeCache(xbName, xB);
+        for (XircuitB xb : xbs) {
+            String xbName = resolveName(xb, ctx, ++index);
+            XircuitBCacheModel cache = computeCache(xbName, xb, ctx);
 
-            if (cache != null && isActiveNow(cache.getConfig()))
+            if (cache != null && cache.config().getActiveSchedule().isActiveNow(getClock())) {
                 wrapped = wrap(
-                        cache.getCb(),
+                        cache.cb(),
                         wrapped,
-                        cache.getFallback() instanceof XircuitBFallbackProviderSync fallback ? fallback : null);
+                        cache.config().getFallbackProvider() instanceof XircuitBFallbackProviderSync fallback ? fallback : null);
+            }
 
         }
 

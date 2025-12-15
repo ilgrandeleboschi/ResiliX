@@ -7,43 +7,48 @@ import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategyAsync;
 import io.xircuitb.annotation.XircuitB;
 import io.xircuitb.factory.XircuitBConfigFactory;
+import io.xircuitb.factory.XircuitBNameFactory;
 import io.xircuitb.model.XircuitBCacheModel;
+import io.xircuitb.model.XircuitBConfigModel;
+import io.xircuitb.monitor.XircuitBMonitor;
 import io.xircuitb.provider.XircuitBFallbackProviderAsync;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
 import java.time.Clock;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
+import static io.resilix.util.ResiliXUtils.unwrap;
+
 @Component
-public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider implements ResiliXStrategyAsync {
+public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider implements ResiliXStrategyAsync<XircuitB, XircuitBConfigModel, XircuitBCacheModel> {
 
     @Autowired
-    public XircuitBStrategyProviderAsync(CircuitBreakerRegistry registry, XircuitBConfigFactory factory, Clock clock) {
-        super(registry, factory, clock);
+    public XircuitBStrategyProviderAsync(Clock clock, XircuitBConfigFactory configFactory, XircuitBNameFactory nameFactory, CircuitBreakerRegistry registry, XircuitBMonitor monitor) {
+        super(clock, configFactory, nameFactory, registry, monitor);
     }
 
     @Override
     public Supplier<CompletionStage<Object>> decorate(Supplier<CompletionStage<Object>> supplier, ResiliXContext ctx) {
-        return applyCircuitBreakersAsync(getXBS(ctx.getMethod()), ctx.getMethod(), supplier);
+        return applyCircuitBreakersAsync(extractAnnotations(ctx, XircuitB.class), supplier, ctx);
     }
 
-    private Supplier<CompletionStage<Object>> applyCircuitBreakersAsync(XircuitB[] xBs, Method method, Supplier<CompletionStage<Object>> supplier) {
+    private Supplier<CompletionStage<Object>> applyCircuitBreakersAsync(List<XircuitB> xbs, Supplier<CompletionStage<Object>> supplier, ResiliXContext ctx) {
         Supplier<CompletionStage<Object>> wrapped = supplier;
+        int index = 0;
 
-        for (int i = 0; i < xBs.length; i++) {
-            XircuitB xB = xBs[i];
-            String xbName = getXbName(method, xB, i + 1);
-            XircuitBCacheModel cache = computeCache(xbName, xB);
+        for (XircuitB xb : xbs) {
+            String xbName = resolveName(xb, ctx, ++index);
+            XircuitBCacheModel cache = computeCache(xbName, xb, ctx);
 
-            if (cache != null && isActiveNow(cache.getConfig())) {
+            if (cache != null && cache.config().getActiveSchedule().isActiveNow(getClock())) {
                 wrapped = wrapAsync(
-                        cache.getCb(),
+                        cache.cb(),
                         wrapped,
-                        cache.getFallback() instanceof XircuitBFallbackProviderAsync fallback ? fallback : null);
+                        cache.config().getFallbackProvider() instanceof XircuitBFallbackProviderAsync fallback ? fallback : null);
             }
         }
 
@@ -53,11 +58,16 @@ public class XircuitBStrategyProviderAsync extends XircuitBStrategyProvider impl
     private Supplier<CompletionStage<Object>> wrapAsync(CircuitBreaker cb, Supplier<CompletionStage<Object>> supplier, XircuitBFallbackProviderAsync fallbackProvider) {
         return () -> cb.executeCompletionStage(supplier)
                 .exceptionallyCompose(ex -> {
-                    if (ex instanceof CallNotPermittedException e && fallbackProvider != null) {
-                        return fallbackProvider.returnFallbackModel(cb.getName(), fallbackProvider.apply(e), e);
+                    Throwable cause = unwrap(ex);
+                    if (cause instanceof CallNotPermittedException cnp && fallbackProvider != null) {
+                        return fallbackProvider.returnFallbackModel(
+                                cb.getName(),
+                                fallbackProvider.apply(cnp),
+                                cnp
+                        );
                     }
                     CompletableFuture<Object> failed = new CompletableFuture<>();
-                    failed.completeExceptionally(ex);
+                    failed.completeExceptionally(cause);
                     return failed;
                 });
     }

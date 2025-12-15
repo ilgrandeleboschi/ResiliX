@@ -5,39 +5,33 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.xircuitb.config.XircuitBAutoConfiguration;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.test.context.ActiveProfiles;
-import utils.MockConfigProvider;
-import utils.MockFallbackProviderSync;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
+import util.ClockTestConfig;
+import util.MockConfigProvider;
+import util.MockFallbackProviderSync;
 
 import static io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
-import static utils.MockBuilder.FIXED_CLOCK;
 
 @SpringBootTest(
         classes = {XircuitBAutoConfiguration.class,
                 DummyService.class,
                 MockFallbackProviderSync.class,
-                MockConfigProvider.class},
+                MockConfigProvider.class,
+                ClockTestConfig.class},
         webEnvironment = SpringBootTest.WebEnvironment.NONE
 )
 @ActiveProfiles("test")
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 class XircuitBIntegrationTest {
 
-    @Mock
-    Clock clock;
+    @Autowired
+    ClockTestConfig.MutableClock clock;
     @Autowired
     DummyService service;
     @Autowired
@@ -45,31 +39,22 @@ class XircuitBIntegrationTest {
 
     @Test
     void testCircuitBreakerTransitions() {
-        Instant start = Instant.now();
-        when(clock.instant()).thenReturn(start);
-        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        assertEquals("OK", service.call(1));
 
-        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
-                .clock(clock)
-                .minimumNumberOfCalls(1)
-                .slidingWindowSize(1)
-                .failureRateThreshold(1)
-                .waitDurationInOpenState(Duration.ofMillis(100))
-                .permittedNumberOfCallsInHalfOpenState(1)
-                .recordExceptions(RuntimeException.class)
-                .build();
-
-        CircuitBreaker cb = registry.circuitBreaker("xbTest", config);
+        CircuitBreaker cb = registry.getAllCircuitBreakers().stream()
+                .filter(item -> item.getName().equals("xbTest"))
+                .findAny()
+                .orElseThrow(() -> new AssertionError("CircuitBreaker xbTest not found"));
 
         assertThrows(RuntimeException.class, () -> service.call(0));
         assertEquals(CircuitBreaker.State.OPEN, cb.getState());
 
-        when(clock.instant()).thenReturn(start.plusMillis(200));
+        clock.advanceMillis(200);
 
         assertThrows(RuntimeException.class, () -> service.call(0));
         assertEquals(CircuitBreaker.State.OPEN, cb.getState());
 
-        when(clock.instant()).thenReturn(start.plusMillis(400));
+        clock.advanceMillis(400);
 
         assertEquals("OK", service.call(1));
         assertEquals(CircuitBreaker.State.CLOSED, cb.getState());
@@ -80,8 +65,6 @@ class XircuitBIntegrationTest {
 
     @Test
     void testInactiveXircuitB() {
-        when(clock.instant()).thenReturn(FIXED_CLOCK.instant());
-
         assertEquals("OK", service.inactiveXircuit());
 
         CircuitBreaker cb = registry.getAllCircuitBreakers().stream()

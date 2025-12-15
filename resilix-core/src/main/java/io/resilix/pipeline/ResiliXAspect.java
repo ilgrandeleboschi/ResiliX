@@ -12,48 +12,52 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.resilix.utils.ResiliXUtils.isAsync;
+import static io.resilix.util.ResiliXUtils.isAsync;
 
 @Aspect
 @Component
 @RequiredArgsConstructor
-public class ResiliXAspect {
+public class ResiliXAspect<A extends Annotation, C, K> {
 
-    private final List<ResiliXStrategy> allStrategies;
-    private final Map<MethodKey, List<? extends ResiliXStrategy>> cache = new ConcurrentHashMap<>();
+    private final List<ResiliXStrategy<A, C, K>> allStrategies;
+    private final Map<MethodKey, List<ResiliXStrategy<A, C, K>>> cache = new ConcurrentHashMap<>();
 
-    @Around("io.resilix.utils.ResiliXPointcut.allResiliX()")
+    @Around("io.resilix.util.ResiliXPointcut.allResiliX()")
     public Object applyResiliX(ProceedingJoinPoint pjp) throws Throwable {
         Method method = ((MethodSignature) pjp.getSignature()).getMethod();
         MethodKey key = new MethodKey(pjp.getTarget().getClass(), method);
 
-        List<? extends ResiliXStrategy> strategies = cache.computeIfAbsent(key, this::resolveStrategies);
+        List<ResiliXStrategy<A, C, K>> strategies = cache.computeIfAbsent(key, this::resolveStrategies);
 
-        return new ResiliXExecutionPipeline(new ResiliXStrategyPipeline(strategies)).execute(
+        return new ResiliXExecutionPipeline<>(new ResiliXStrategyPipeline<>(strategies)).execute(
                 pjp,
-                new ResiliXContext(method, pjp.getArgs(), method.getAnnotations(), new ConcurrentHashMap<>()
-                )
-        );
+                ResiliXContext.builder()
+                        .method(method)
+                        .args(pjp.getArgs())
+                        .metadata(new ConcurrentHashMap<>())
+                        .build());
     }
 
-    private List<? extends ResiliXStrategy> resolveStrategies(MethodKey key) {
+    private List<ResiliXStrategy<A, C, K>> resolveStrategies(MethodKey key) {
         return isAsync(key.method()) ?
                 selectStrategies(key.method(), ResiliXStrategyAsync.class) :
                 selectStrategies(key.method(), ResiliXStrategySync.class);
     }
 
-    private <T extends ResiliXStrategy> List<T> selectStrategies(Method method, Class<T> type) {
+    private List<ResiliXStrategy<A, C, K>> selectStrategies(Method method, Class<?> type) {
         return allStrategies.stream()
                 .filter(type::isInstance)
-                .map(type::cast)
-                .filter(strategy -> Arrays.stream(method.getAnnotations()).anyMatch(strategy::support))
+                .filter(strategy -> {
+                    Class<A> annClass = strategy.support();
+                    return method.getAnnotationsByType(annClass).length > 0;
+                })
                 .sorted(Comparator.comparingInt(ResiliXStrategy::priority))
                 .toList();
     }

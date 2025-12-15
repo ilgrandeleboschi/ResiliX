@@ -1,25 +1,20 @@
 package io.xircuitb.validator;
 
-import io.xircuitb.exceptions.XircuitBConfigurationException;
+import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.model.XircuitBConfigModel;
-import io.xircuitb.provider.XircuitBFallbackProviderAsync;
 import org.junit.jupiter.api.Test;
-import utils.MockFallbackProviderSync;
 
-import java.time.DayOfWeek;
-import java.time.LocalTime;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static io.xircuitb.validator.XircuitBValidator.validateParameters;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static utils.MockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.createXircuitBConfigModel;
 
 class XircuitBValidatorTest {
 
     @Test
     void validateParameters_noThrow() {
-        assertDoesNotThrow(() -> XircuitBValidator.validateParameters(createXircuitBConfigModel()));
+        assertDoesNotThrow(() -> validateParameters(createXircuitBConfigModel()));
     }
 
     @Test
@@ -31,7 +26,7 @@ class XircuitBValidatorTest {
 
         XircuitBConfigurationException ex = assertThrows(
                 XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateParameters(config)
+                () -> validateParameters(config)
         );
 
         assertEquals("SlidingWindowType is not valid: INVALID_TYPE", ex.getMessage());
@@ -46,7 +41,7 @@ class XircuitBValidatorTest {
 
         XircuitBConfigurationException ex = assertThrows(
                 XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateParameters(config)
+                () -> validateParameters(config)
         );
 
         assertEquals("waitDurationInOpenState must be positive or zero", ex.getMessage());
@@ -64,7 +59,7 @@ class XircuitBValidatorTest {
 
         XircuitBConfigurationException ex = assertThrows(
                 XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateParameters(config)
+                () -> validateParameters(config)
         );
 
         assertEquals("slidingWindowSize must be positive", ex.getMessage());
@@ -83,66 +78,16 @@ class XircuitBValidatorTest {
 
         XircuitBConfigurationException ex = assertThrows(
                 XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateParameters(config)
+                () -> validateParameters(config)
         );
 
         assertEquals("failureRateThreshold must be between 0.0 and 100.0", ex.getMessage());
     }
 
     @Test
-    void validateAndConvertDays_noThrow() {
-        assertArrayEquals(new DayOfWeek[]{DayOfWeek.SUNDAY, DayOfWeek.MONDAY}, XircuitBValidator.validateAndConvertDays(new String[]{"SUNDAY", "MONDAY"}));
-    }
-
-    @Test
-    void validateAndConvertDays_invalidDay_throw() {
-        XircuitBConfigurationException ex = assertThrows(
-                XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateAndConvertDays(new String[]{"INVALID_DAY"})
-        );
-
-        assertEquals("Invalid day of week: INVALID_DAY", ex.getMessage());
-    }
-
-    @Test
-    void validateAndConvertTime_noThrow() {
-        assertEquals(LocalTime.of(9, 0), XircuitBValidator.validateAndConvertTime("09:00"));
-    }
-
-    @Test
-    void validateAndConvertTime_invalidTime_throw() {
-        XircuitBConfigurationException ex = assertThrows(
-                XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateAndConvertTime("INVALID_TIME")
-        );
-
-        assertEquals("Invalid time declaration: INVALID_TIME", ex.getMessage());
-    }
-
-    @Test
-    void validateAndConvertExceptions_noThrow() {
-        assertArrayEquals(new Class[]{Exception.class}, XircuitBValidator.validateAndConvertExceptions(new String[]{"java.lang.Exception"}));
-    }
-
-    @Test
-    void validateAndConvertExceptions_invalidException_throw() {
-        XircuitBConfigurationException ex = assertThrows(
-                XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateAndConvertExceptions(new String[]{"INVALID_EXCEPTION"})
-        );
-
-        assertEquals("Exception class is not a valid exception: INVALID_EXCEPTION", ex.getMessage());
-    }
-
-    @Test
-    void validateFallbackClass() {
-        MockFallbackProviderSync mock = new MockFallbackProviderSync();
-        XircuitBConfigurationException ex = assertThrows(
-                XircuitBConfigurationException.class,
-                () -> XircuitBValidator.validateFallbackClass(mock, XircuitBFallbackProviderAsync.class)
-        );
-
-        assertEquals("class utils.MockFallbackProviderSync must implement XircuitBFallbackProviderAsync", ex.getMessage());
+    void validateParameters_configNull_throw() {
+        XircuitBConfigurationException e = assertThrows(XircuitBConfigurationException.class, () -> validateParameters(null));
+        assertEquals("XircuitB configuration must not be null", e.getMessage());
     }
 
 }
