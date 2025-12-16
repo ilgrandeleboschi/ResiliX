@@ -10,7 +10,7 @@ public interface ResiliXConfigFactory<A extends Annotation, C, F> {
 
     C fromAnnotation(A annotation, ResiliXContext ctx);
 
-    C fromDefault(ResiliXContext ctx);
+    C fromDefault(A annotation, ResiliXContext ctx);
 
     C merge(C base, C override);
 

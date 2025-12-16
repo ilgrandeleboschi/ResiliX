@@ -8,10 +8,12 @@ import io.resilix.model.ActivePeriod;
 import io.resilix.model.ActiveSchedule;
 import io.resilix.model.ResiliXContext;
 import io.xircuitb.annotation.XircuitB;
+import io.xircuitb.config.XircuitBDefaultConfig;
+import io.xircuitb.config.XircuitBYMLConfig;
+import io.xircuitb.config.XircuitBsYMLConfig;
 import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.model.ActivePeriodConfig;
 import io.xircuitb.model.XircuitBConfigModel;
-import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.provider.XircuitBConfigProvider;
 import io.xircuitb.provider.XircuitBFallbackProvider;
 import io.xircuitb.provider.defaults.VoidXircuitBConfigProvider;
@@ -43,7 +45,8 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
     private final ApplicationContext appCtx;
     private final XircuitBConfigRegistry configRegistry;
     private final XircuitBFallbackRegistry fallbackRegistry;
-    private final XircuitBDefaultPropertiesModel defaultConf;
+    private final XircuitBsYMLConfig ymlConfig;
+    private final XircuitBDefaultConfig defaultConfig;
 
     @Override
     public XircuitBConfigModel resolveConfig(XircuitB xb, ResiliXContext ctx) {
@@ -55,7 +58,7 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
         }
         return xb.configProvider() != VoidXircuitBConfigProvider.class ?
                 merge(fromProvider(xb.configProvider()), fromAnnotation(xb, ctx)) :
-                merge(fromDefault(ctx), fromAnnotation(xb, ctx));
+                merge(fromDefault(xb, ctx), fromAnnotation(xb, ctx));
     }
 
     @Override
@@ -90,20 +93,21 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
     }
 
     @Override
-    public XircuitBConfigModel fromDefault(ResiliXContext ctx) {
+    public XircuitBConfigModel fromDefault(XircuitB xb, ResiliXContext ctx) {
         try {
-            Class<? extends XircuitBFallbackProvider> clazz = validateAndConvertClass(defaultConf.getFallbackProvider(), XircuitBFallbackProvider.class);
+            XircuitBYMLConfig def = ymlConfig.getXircuitb().getOrDefault(xb.name(), defaultConfig);
+            Class<? extends XircuitBFallbackProvider> clazz = validateAndConvertClass(def.getFallbackProvider(), XircuitBFallbackProvider.class);
             XircuitBFallbackProvider fallback = clazz == VoidXircuitBFallbackProvider.class ? null : getBean(appCtx, clazz);
 
             return XircuitBConfigModel.builder()
-                    .slidingWindowType(defaultConf.getSlidingWindowType())
-                    .slidingWindowSize(defaultConf.getSlidingWindowSize())
-                    .failureRateThreshold(defaultConf.getFailureRateThreshold())
-                    .minNumberOfCalls(defaultConf.getMinNumberOfCalls())
-                    .waitDurationInOpenState(defaultConf.getWaitDurationInOpenState())
-                    .numCallHalfOpen(defaultConf.getNumCallHalfOpen())
-                    .activeSchedule(resolveActiveSchedule(defaultConf))
-                    .exceptionsToCatch(validateAndConvertExceptions(defaultConf.getExceptionsToCatch()))
+                    .slidingWindowType(def.getSlidingWindowType())
+                    .slidingWindowSize(def.getSlidingWindowSize())
+                    .failureRateThreshold(def.getFailureRateThreshold())
+                    .minNumberOfCalls(def.getMinNumberOfCalls())
+                    .waitDurationInOpenState(def.getWaitDurationInOpenState())
+                    .numCallHalfOpen(def.getNumCallHalfOpen())
+                    .activeSchedule(resolveActiveSchedule(def))
+                    .exceptionsToCatch(validateAndConvertExceptions(def.getExceptionsToCatch()))
                     .fallbackProvider(fallback)
                     .build();
         } catch (ResiliXException e) {
@@ -145,7 +149,7 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
                         .build();
     }
 
-    private ActiveSchedule resolveActiveSchedule(XircuitBDefaultPropertiesModel def) {
+    private ActiveSchedule resolveActiveSchedule(XircuitBYMLConfig def) {
         if (def.getActivePeriods() != null && !def.getActivePeriods().isEmpty()) {
             return new ActiveSchedule(def.getActivePeriods().stream()
                     .map(ActivePeriodConfig::toActivePeriod)

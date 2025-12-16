@@ -9,7 +9,7 @@ import java.time.DayOfWeek;
 @Service
 public class DummyService {
 
-    @XircuitB(name = "xbTest")
+    @XircuitB(name = "test")
     public String call(int i) {
         if (i == 0) {
             throw new RuntimeException("fail");

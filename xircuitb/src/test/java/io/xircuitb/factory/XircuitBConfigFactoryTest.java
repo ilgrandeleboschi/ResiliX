@@ -4,9 +4,11 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.resilix.exception.ResiliXException;
 import io.resilix.model.ResiliXContext;
 import io.xircuitb.annotation.XircuitB;
+import io.xircuitb.config.XircuitBDefaultConfig;
+import io.xircuitb.config.XircuitBYMLConfig;
+import io.xircuitb.config.XircuitBsYMLConfig;
 import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.model.XircuitBConfigModel;
-import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.provider.XircuitBFallbackProvider;
 import io.xircuitb.registry.XircuitBConfigRegistry;
 import io.xircuitb.registry.XircuitBFallbackRegistry;
@@ -23,6 +25,8 @@ import util.MockFallbackProviderAsync;
 import util.MockFallbackProviderSync;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import static io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED;
@@ -35,19 +39,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static util.XircuitBMockBuilder.FIXED_CLOCK;
 import static util.XircuitBMockBuilder.createXircuitBConfigModel;
+import static util.XircuitBMockBuilder.createXircuitBYMLConfig;
 import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBConfigFactoryTest {
 
     @Mock
-    XircuitBDefaultPropertiesModel defaultConf;
+    XircuitBsYMLConfig defaultConf;
     @Mock
     ApplicationContext appCtx;
     @Mock
     XircuitBConfigRegistry configRegistry;
     @Mock
     XircuitBFallbackRegistry fallbackRegistry;
+    @Mock
+    XircuitBDefaultConfig defaultConfig;
     @InjectMocks
     XircuitBConfigFactory configFactory;
 
@@ -116,15 +123,12 @@ class XircuitBConfigFactoryTest {
     @Test
     void resolveConfig_exceptionsAndActiveDayDefaultConfig() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.SimpleXb.class.getMethod("singleXb").getAnnotation(XircuitB.class);
-        when(defaultConf.getSlidingWindowType()).thenReturn("COUNT_BASED");
-        when(defaultConf.getSlidingWindowSize()).thenReturn(100);
-        when(defaultConf.getActiveFrom()).thenReturn("09:00");
-        when(defaultConf.getActiveTo()).thenReturn("19:00");
-        when(defaultConf.getExceptionsToCatch()).thenReturn(new String[]{"java.lang.Exception"});
-        when(defaultConf.getActiveDays()).thenReturn(new String[]{"SUNDAY", "MONDAY"});
+        Map<String, XircuitBYMLConfig> xircuitbMap = new HashMap<>();
+        XircuitBYMLConfig xircuitBYMLConfig = createXircuitBYMLConfig();
+        xircuitbMap.put("", xircuitBYMLConfig);
+        when(defaultConf.getXircuitb()).thenReturn(xircuitbMap);
 
         XircuitBConfigModel actual = configFactory.resolveConfig(xb, ctx);
-
 
         assertEquals(2, actual.getActiveSchedule().periods().getFirst().activeDays().size());
         assertEquals(Exception.class, actual.getExceptionsToCatch()[0]);
@@ -145,12 +149,11 @@ class XircuitBConfigFactoryTest {
     @Test
     void resolveConfig_exception() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.SimpleXb.class.getMethod("singleXb").getAnnotation(XircuitB.class);
-        when(defaultConf.getSlidingWindowType()).thenReturn("COUNT_BASED");
-        when(defaultConf.getSlidingWindowSize()).thenReturn(100);
-        when(defaultConf.getActiveFrom()).thenReturn("09:00");
-        when(defaultConf.getActiveTo()).thenReturn("19:00");
-        when(defaultConf.getExceptionsToCatch()).thenReturn(new String[]{"java.lang.test"});
-        when(defaultConf.getActiveDays()).thenReturn(new String[]{"SUNDAY", "MONDAY"});
+        Map<String, XircuitBYMLConfig> xircuitbMap = new HashMap<>();
+        XircuitBYMLConfig xircuitBYMLConfig = createXircuitBYMLConfig();
+        xircuitBYMLConfig.setExceptionsToCatch(new String[]{"java.lang.test"});
+        xircuitbMap.put("", xircuitBYMLConfig);
+        when(defaultConf.getXircuitb()).thenReturn(xircuitbMap);
 
         XircuitBConfigurationException actual = assertThrows(XircuitBConfigurationException.class, () -> configFactory.resolveConfig(xb, ctx));
 

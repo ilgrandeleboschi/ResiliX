@@ -37,10 +37,12 @@ public String externalService(String input) {
 
 // Fallback is automatic if provided
 try{
-    externalService("test");
-} catch (CallNotPermittedException e){
-  // handle manually if you didn’t provide a fallback
-}
+
+externalService("test");
+}catch(
+CallNotPermittedException e){
+        // handle manually if you didn’t provide a fallback
+        }
 ```
 
 You can configure your circuit breakers in a few flexible ways:
@@ -49,45 +51,66 @@ You can configure your circuit breakers in a few flexible ways:
 2. **Application YAML** – provide a default template in your `application.yml`, so you only override what you need in
    the annotation.
 3. **Configuration providers** – implement `XircuitBConfigProvider` to generate a runtime configuration dynamically.
-4. **Configuration templates** – through `XircuitBConfigRegistry`, you can register your custom configurations and retrieve them just by using their names
+4. **Configuration templates** – through `XircuitBConfigRegistry`, you can register your custom configurations and
+   retrieve them just by using their names
 
 This means you can mix and match: have a default YAML template, override a few parameters inline, or even provide a full
 runtime configuration programmatically. It’s **powerful and flexible**, without forcing you to repeat boilerplate
 everywhere.
 
-Hierarchy is : **YML Defaults** < **Config providers** < **Config templates** < **Inline annotation**. Every configuration is merged with your annotation params at runtime, to let you adjust your templates.
+Hierarchy is : **Inline annotation** > **Config templates** > **Config providers** > **YML Defaults**. Every
+configuration is merged with your annotation params at runtime, to let you adjust your templates.
 
 ### YAML Circuit Breaker parameters
 
-You can use the classic application format:
+XircuitB provides you a default template to quickly create circuit breakers with just the annotation `XircuitB`, you can override it to have different defaults:
+```yml
+xb-def-template:
+   slidingWindowSize: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_SIZE}
+   minNumberOfCalls: ${XB_DEF_TEMPLATE_MIN_NUM_CALLS}
+   failureRateThreshold: ${XB_DEF_TEMPLATE_FAILURE_RATE_THRESHOLD}
+   waitDurationInOpenState: ${XB_DEF_TEMPLATE_WAIT_DURATION_OPEN_STATE}
+   numCallHalfOpen: ${XB_DEF_TEMPLATE_NUM_CALL_HALF_OPEN}
+   exceptionsToCatch: ${XB_DEF_TEMPLATE_EXCEPTIONS_TO_CATCH}
+   fallbackProvider: ${XB_DEF_TEMPLATE_FALLBACK_PROVIDER}
+   configProvider: ${XB_DEF_TEMPLATE_CONFIG_PROVIDER}
+   slidingWindowType: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_TYPE}
+   activeFrom: ${XB_DEF_TEMPLATE_ACTIVE_FROM}
+   activeTo: ${XB_DEF_TEMPLATE_ACTIVE_TO}
+   activeDays: ${XB_DEF_TEMPLATE_ACTIVE_DAYS}
+```
+
+You can use the classic application format and naming the `XircuitB` to get the yml
+configuration:
 
 ```yml
-default-xirctuib:
-  slidingWindowType: TIME_BASED
-  minNumberOfCalls: 30
+xirctuib:
+  yourCustomName:
+    slidingWindowType: TIME_BASED
+    minNumberOfCalls: 30
+    ..........
+```
+
+Or just env variables for default parameters:
+
+```yml
+XIRCUITB_SLIDING_WINDOW_TYPE: TIME_BASED
+XIRCUITB_MIN_NUM_CALLS: 30
   ..........
 ```
 
-Or just env variables
-
-```yml
-XB_SLIDING_WINDOW_TYPE: TIME_BASED
-XB_MIN_NUM_CALLS: 30
-  ..........
-```
-
-| YML Name                | Env Variable                | Default value      | Description                                                                                                                                                                                                                                                                           |
-|-------------------------|-----------------------------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| slidingWindowType       | XB_SLIDING_WINDOW_TYPE      | COUNT_BASED        | The type of sliding window used to calculate the failure rate. Possible values are:<br/>- COUNT_BASED: tracks the outcome of the last N calls (defined by CB_SLIDING_WINDOW_SIZE).<br/>- TIME_BASED: tracks all calls made in the last N seconds (defined by CB_SLIDING_WINDOW_SIZE). |
-| slidingWindowSize       | XB_SLIDING_WINDOW_SIZE      | 100                | Size of the sliding window.<br/>- If COUNT_BASED: the number of recent calls considered.<br/>- If TIME_BASED: the duration (in seconds) of the time window.                                                                                                                           |
-| minNumberOfCalls        | XB_MIN_NUM_CALLS            | 10                 | The minimum number of calls required before calculating the failure rate                                                                                                                                                                                                              |
-| failureRateThreshold    | XB_FAILURE_RATE_THRESHOLD   | 75                 | The failure rate threshold (in percentage) that triggers the circuit breaker to open                                                                                                                                                                                                  |
-| waitDurationInOpenState | XB_WAIT_DURATION_OPEN_STATE | 5000 (5s)          | The time that the circuit breaker stays open before transitioning to half-open                                                                                                                                                                                                        |
-| numCallHalfOpen         | XB_NUM_CALL_HALF_OPEN       | 10                 | The number of permitted calls when the circuit breaker is half-open                                                                                                                                                                                                                   |
-| activeFrom              | XB_ACTIVE_FROM              | 00:00              | The starting time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                     |
-| activeTo                | XB_ACTIVE_TO                | 23:59              | The ending time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                       |
-| activeDays              | XB_ACTIVE_DAYS              | DayOfWeek.values() | The days of the week when the circuit breaker is active. By default, all days are active                                                                                                                                                                                              |
-| exceptionsToCatch       | XB_EXCEPTIONS_TO_CATCH      | Exception.class    | The type of exception that do count for circuit breaker metrics, it can be a custom exception class.                                                                                                                                                                                  |
+| YML Name                | Env Variable                             | Default value      | Description                                                                                                                                                                                                                                                                           |
+|-------------------------|------------------------------------------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| slidingWindowType       | XB_DEF_TEMPLATE_SLIDING_WINDOW_TYPE      | COUNT_BASED        | The type of sliding window used to calculate the failure rate. Possible values are:<br/>- COUNT_BASED: tracks the outcome of the last N calls (defined by CB_SLIDING_WINDOW_SIZE).<br/>- TIME_BASED: tracks all calls made in the last N seconds (defined by CB_SLIDING_WINDOW_SIZE). |
+| slidingWindowSize       | XB_DEF_TEMPLATE_SLIDING_WINDOW_SIZE      | 100                | Size of the sliding window.<br/>- If COUNT_BASED: the number of recent calls considered.<br/>- If TIME_BASED: the duration (in seconds) of the time window.                                                                                                                           |
+| minNumberOfCalls        | XB_DEF_TEMPLATE_MIN_NUM_CALLS            | 10                 | The minimum number of calls required before calculating the failure rate                                                                                                                                                                                                              |
+| failureRateThreshold    | XB_DEF_TEMPLATE_FAILURE_RATE_THRESHOLD   | 75                 | The failure rate threshold (in percentage) that triggers the circuit breaker to open                                                                                                                                                                                                  |
+| waitDurationInOpenState | XB_DEF_TEMPLATE_WAIT_DURATION_OPEN_STATE | 5000 (5s)          | The time that the circuit breaker stays open before transitioning to half-open                                                                                                                                                                                                        |
+| numCallHalfOpen         | XB_DEF_TEMPLATE_NUM_CALL_HALF_OPEN       | 10                 | The number of permitted calls when the circuit breaker is half-open                                                                                                                                                                                                                   |
+| activeFrom              | XB_DEF_TEMPLATE_ACTIVE_FROM              | 00:00              | The starting time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                     |
+| activeTo                | XB_DEF_TEMPLATE_ACTIVE_TO                | 23:59              | The ending time of the period when the circuit breaker is active (format HH:mm)                                                                                                                                                                                                       |
+| activeDays              | XB_DEF_TEMPLATE_ACTIVE_DAYS              | DayOfWeek.values() | The days of the week when the circuit breaker is active. By default, all days are active                                                                                                                                                                                              |
+| exceptionsToCatch       | XB_DEF_TEMPLATE_EXCEPTIONS_TO_CATCH      | Exception.class    | The type of exception that do count for circuit breaker metrics, it can be a custom exception class.                                                                                                                                                                                  |
 
 ## Advanced Features
 
@@ -113,16 +136,19 @@ Control **when** a CB is applied:
         activeDays = {DayOfWeek.MONDAY, DayOfWeek.FRIDAY}
 )
 ```
+
 Use application yml for advanced scheduling configuration:
+
 ```yml
-default-xircuitb:
-   activePeriods:
-     - from: "09:00"
-       to: "18:00"
-       days: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY ]
-     - from: "09:00"
-       to: "13:00"
-       days: [ SATURDAY ]
+xircuitb:
+  yourXb:
+    activePeriods:
+      - from: "09:00"
+        to: "18:00"
+        days: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY ]
+      - from: "09:00"
+        to: "13:00"
+        days: [ SATURDAY ]
 ```
 
 Outside the periods provided, the method runs **normally**, CB-free.
@@ -191,7 +217,8 @@ public class MyConfigurationProvider implements XircuitBConfigProvider {
 
 ## Global Registries
 
-You can also register your templates through `XircuitBConfigRegistry` and `XircuitBFallbackRegistry`, so you can retrieve them just calling them by name.
+You can also register your templates through `XircuitBConfigRegistry` and `XircuitBFallbackRegistry`, so you can
+retrieve them just calling them by name.
 
 ```java
 import io.xircuitb.annotation.XircuitB;
@@ -203,8 +230,8 @@ private final XircuitBConfigRegistry configRegistry;
 private final XircuitBFallbackRegistry fallbackRegistry;
 
 public void initConfigurationRegistry() {
-   configRegistry.register("MyCustomConfiguration", XircuitBConfigModel.builder()......build()):
-   fallbackRegistry.register("MyCustomFallback", XircuitBFallbackProvider.class);
+    configRegistry.register("MyCustomConfiguration", XircuitBConfigModel.builder()......build()):
+    fallbackRegistry.register("MyCustomFallback", XircuitBFallbackProvider.class);
 }
 
 @XircuitB(configTemplate = "MyCustomConfiguration", fallbackTemplate = "MyCustomFallback")

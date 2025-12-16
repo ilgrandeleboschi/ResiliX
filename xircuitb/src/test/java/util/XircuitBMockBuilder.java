@@ -3,6 +3,7 @@ package util;
 import io.resilix.model.ActivePeriod;
 import io.resilix.model.ActiveSchedule;
 import io.resilix.model.ResiliXContext;
+import io.xircuitb.config.XircuitBYMLConfig;
 import io.xircuitb.model.XircuitBConfigModel;
 import lombok.experimental.UtilityClass;
 
@@ -48,6 +49,17 @@ public class XircuitBMockBuilder {
                 .activeSchedule(ActiveSchedule.of(new ActivePeriod(LocalTime.of(9, 0), LocalTime.of(18, 0), List.of(DayOfWeek.MONDAY))))
                 .fallbackProvider(new MockFallbackProviderAsync())
                 .build();
+    }
+
+    public static XircuitBYMLConfig createXircuitBYMLConfig() {
+        XircuitBYMLConfig xircuitBYMLConfig = new XircuitBYMLConfig();
+        xircuitBYMLConfig.setSlidingWindowSize(100);
+        xircuitBYMLConfig.setSlidingWindowType("COUNT_BASED");
+        xircuitBYMLConfig.setActiveFrom("09:00");
+        xircuitBYMLConfig.setActiveTo("19:00");
+        xircuitBYMLConfig.setExceptionsToCatch(new String[]{"java.lang.Exception"});
+        xircuitBYMLConfig.setActiveDays(new String[]{"SUNDAY", "MONDAY"});
+        return xircuitBYMLConfig;
     }
 
     public static ResiliXContext createResiliXContext(Method method) {

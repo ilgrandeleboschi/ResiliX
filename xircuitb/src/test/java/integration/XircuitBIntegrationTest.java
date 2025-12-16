@@ -42,9 +42,9 @@ class XircuitBIntegrationTest {
         assertEquals("OK", service.call(1));
 
         CircuitBreaker cb = registry.getAllCircuitBreakers().stream()
-                .filter(item -> item.getName().equals("xbTest"))
+                .filter(item -> item.getName().equals("test"))
                 .findAny()
-                .orElseThrow(() -> new AssertionError("CircuitBreaker xbTest not found"));
+                .orElseThrow(() -> new AssertionError("CircuitBreaker test not found"));
 
         assertThrows(RuntimeException.class, () -> service.call(0));
         assertEquals(CircuitBreaker.State.OPEN, cb.getState());

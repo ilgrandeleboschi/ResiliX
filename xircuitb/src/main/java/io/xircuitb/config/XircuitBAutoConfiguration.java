@@ -8,7 +8,6 @@ import io.xircuitb.factory.XircuitBConfigFactory;
 import io.xircuitb.factory.XircuitBNameFactory;
 import io.xircuitb.model.XircuitBCacheModel;
 import io.xircuitb.model.XircuitBConfigModel;
-import io.xircuitb.model.XircuitBDefaultPropertiesModel;
 import io.xircuitb.monitor.XircuitBMonitor;
 import io.xircuitb.registry.XircuitBConfigRegistry;
 import io.xircuitb.registry.XircuitBFallbackRegistry;
@@ -27,13 +26,13 @@ import java.util.List;
 
 @Configuration
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-@EnableConfigurationProperties(XircuitBDefaultPropertiesModel.class)
+@EnableConfigurationProperties({XircuitBsYMLConfig.class, XircuitBDefaultConfig.class})
 public class XircuitBAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public XircuitBConfigFactory xircuitBConfigFactory(ApplicationContext ctx, XircuitBConfigRegistry configRegistry, XircuitBFallbackRegistry fallbackRegistry, XircuitBDefaultPropertiesModel defaultProperties) {
-        return new XircuitBConfigFactory(ctx, configRegistry, fallbackRegistry, defaultProperties);
+    public XircuitBConfigFactory xircuitBConfigFactory(ApplicationContext ctx, XircuitBConfigRegistry configRegistry, XircuitBFallbackRegistry fallbackRegistry, XircuitBsYMLConfig defaultProperties, XircuitBDefaultConfig defaultConfig) {
+        return new XircuitBConfigFactory(ctx, configRegistry, fallbackRegistry, defaultProperties, defaultConfig);
     }
 
     @Bean

@@ -1,21 +1,33 @@
-default-xircuitb:
-  slidingWindowSize: 10
+xb-def-template:
+  slidingWindowSize: 5
   minNumberOfCalls: 1
-  failureRateThreshold: 20
+  failureRateThreshold: 10
   waitDurationInOpenState: 100
   numCallHalfOpen: 1
   exceptionsToCatch: java.lang.Exception
+  fallbackProvider:
+  configProvider:
   slidingWindowType: COUNT_BASED
-  activeFrom: "00:00"
-  activeTo: "23:59"
-  activeDays: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY ]
-  activePeriods:
-    - from: "09:00"
-      to: "18:00"
-      days: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY ]
-    - from: "09:00"
-      to: "13:00"
-      days: [ SATURDAY ]
+  activeFrom:
+  activeTo:
+  activeDays:
+xircuitb:
+  test:
+    slidingWindowSize: 5
+    minNumberOfCalls: 1
+    failureRateThreshold: 10
+    waitDurationInOpenState: 100
+    numCallHalfOpen: 1
+    exceptionsToCatch: java.lang.Exception
+    slidingWindowType: COUNT_BASED
+    activeDays: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY ]
+    activePeriods:
+      - from: "09:00"
+        to: "18:00"
+        days: [ MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY ]
+      - from: "09:00"
+        to: "13:00"
+        days: [ SATURDAY ]
 
 resilix:
   xircuitb:

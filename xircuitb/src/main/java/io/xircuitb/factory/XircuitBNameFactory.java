@@ -10,9 +10,8 @@ public class XircuitBNameFactory implements ResiliXNameFactory<XircuitB> {
 
     @Override
     public String resolveName(XircuitB xb, ResiliXContext ctx, int index) {
-        if (!xb.name().isEmpty()) {
+        if (!xb.name().isEmpty())
             return xb.name();
-        }
 
         String base = ctx.getMethod().getDeclaringClass().getSimpleName() + "." + ctx.getMethod().getName();
         String sigHash = Integer.toHexString(ctx.getMethod().toGenericString().hashCode());
