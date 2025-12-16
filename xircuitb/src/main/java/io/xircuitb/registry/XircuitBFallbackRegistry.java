@@ -6,12 +6,14 @@ import io.xircuitb.provider.XircuitBFallbackProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.resilix.util.ResiliXUtils.fmt;
 
+@Component
 @RequiredArgsConstructor
 public class XircuitBFallbackRegistry implements ResiliXFallbackRegistry<XircuitBFallbackProvider> {
 
