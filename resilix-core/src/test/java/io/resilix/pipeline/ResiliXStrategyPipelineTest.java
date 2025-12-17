@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import util.ContextBuilder;
 import util.Dummy;
 import util.DummyAnn;
+import util.DummyCacheModel;
+import util.DummyConfigModel;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,7 +16,7 @@ class ResiliXStrategyPipelineTest {
 
     @Test
     void unsupportedOperationTest() throws NoSuchMethodException {
-        ResiliXStrategyPipeline<DummyAnn, Object, Object> resiliXStrategyPipeline = new ResiliXStrategyPipeline<>(null);
+        ResiliXStrategyPipeline<DummyAnn, DummyConfigModel, DummyCacheModel> resiliXStrategyPipeline = new ResiliXStrategyPipeline<>(null);
 
         DummyAnn ann = Dummy.class.getMethod("syncMethod").getAnnotation(DummyAnn.class);
         ResiliXContext ctx = defaultContext();

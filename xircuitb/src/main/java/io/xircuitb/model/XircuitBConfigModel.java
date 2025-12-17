@@ -1,15 +1,12 @@
 package io.xircuitb.model;
 
-import io.resilix.model.ActiveSchedule;
-import io.xircuitb.provider.XircuitBFallbackProvider;
-import lombok.Builder;
+import io.resilix.model.ResiliXConfigModel;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
-@Setter
-@Builder
-public class XircuitBConfigModel {
+@SuperBuilder
+public class XircuitBConfigModel extends ResiliXConfigModel {
 
     private SlidingWindowType slidingWindowType;
     private int slidingWindowSize;
@@ -17,9 +14,5 @@ public class XircuitBConfigModel {
     private int minNumberOfCalls;
     private long waitDurationInOpenState;
     private int numCallHalfOpen;
-    private Class<? extends Throwable>[] exceptionsToCatch;
-    private XircuitBFallbackProvider fallbackProvider;
-    @Builder.Default
-    private ActiveSchedule activeSchedule = ActiveSchedule.alwaysOn();
 
 }

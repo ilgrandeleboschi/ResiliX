@@ -2,14 +2,12 @@ package io.resilix.model;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
-@Setter
 @Builder
 public class ResiliXContext {
 

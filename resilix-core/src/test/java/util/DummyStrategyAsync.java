@@ -6,7 +6,7 @@ import io.resilix.strategy.ResiliXStrategyAsync;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
-public class DummyStrategyAsync implements ResiliXStrategyAsync<DummyAnn, Object, Object> {
+public class DummyStrategyAsync implements ResiliXStrategyAsync<DummyAnn, DummyConfigModel, DummyCacheModel> {
     @Override
     public Class<DummyAnn> support() {
         return DummyAnn.class;
@@ -18,12 +18,12 @@ public class DummyStrategyAsync implements ResiliXStrategyAsync<DummyAnn, Object
     }
 
     @Override
-    public Object createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
+    public DummyConfigModel createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 
     @Override
-    public Object computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
+    public DummyCacheModel computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 

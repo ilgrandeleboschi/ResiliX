@@ -63,21 +63,23 @@ configuration is merged with your annotation params at runtime, to let you adjus
 
 ### YAML Circuit Breaker parameters
 
-XircuitB provides you a default template to quickly create circuit breakers with just the annotation `XircuitB`, you can override it to have different defaults:
+XircuitB provides you a default template to quickly create circuit breakers with just the annotation `XircuitB`, you can
+override it to have different defaults:
+
 ```yml
 xb-def-template:
-   slidingWindowSize: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_SIZE}
-   minNumberOfCalls: ${XB_DEF_TEMPLATE_MIN_NUM_CALLS}
-   failureRateThreshold: ${XB_DEF_TEMPLATE_FAILURE_RATE_THRESHOLD}
-   waitDurationInOpenState: ${XB_DEF_TEMPLATE_WAIT_DURATION_OPEN_STATE}
-   numCallHalfOpen: ${XB_DEF_TEMPLATE_NUM_CALL_HALF_OPEN}
-   exceptionsToCatch: ${XB_DEF_TEMPLATE_EXCEPTIONS_TO_CATCH}
-   fallbackProvider: ${XB_DEF_TEMPLATE_FALLBACK_PROVIDER}
-   configProvider: ${XB_DEF_TEMPLATE_CONFIG_PROVIDER}
-   slidingWindowType: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_TYPE}
-   activeFrom: ${XB_DEF_TEMPLATE_ACTIVE_FROM}
-   activeTo: ${XB_DEF_TEMPLATE_ACTIVE_TO}
-   activeDays: ${XB_DEF_TEMPLATE_ACTIVE_DAYS}
+  slidingWindowSize: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_SIZE}
+  minNumberOfCalls: ${XB_DEF_TEMPLATE_MIN_NUM_CALLS}
+  failureRateThreshold: ${XB_DEF_TEMPLATE_FAILURE_RATE_THRESHOLD}
+  waitDurationInOpenState: ${XB_DEF_TEMPLATE_WAIT_DURATION_OPEN_STATE}
+  numCallHalfOpen: ${XB_DEF_TEMPLATE_NUM_CALL_HALF_OPEN}
+  exceptionsToCatch: ${XB_DEF_TEMPLATE_EXCEPTIONS_TO_CATCH}
+  fallbackProvider: ${XB_DEF_TEMPLATE_FALLBACK_PROVIDER}
+  configProvider: ${XB_DEF_TEMPLATE_CONFIG_PROVIDER}
+  slidingWindowType: ${XB_DEF_TEMPLATE_SLIDING_WINDOW_TYPE}
+  activeFrom: ${XB_DEF_TEMPLATE_ACTIVE_FROM}
+  activeTo: ${XB_DEF_TEMPLATE_ACTIVE_TO}
+  activeDays: ${XB_DEF_TEMPLATE_ACTIVE_DAYS}
 ```
 
 You can use the classic application format and naming the `XircuitB` to get the yml

@@ -4,7 +4,7 @@ import io.github.resilience4j.core.functions.CheckedSupplier;
 import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategySync;
 
-public class DummyStrategySync implements ResiliXStrategySync<DummyAnn, Object, Object> {
+public class DummyStrategySync implements ResiliXStrategySync<DummyAnn, DummyConfigModel, DummyCacheModel> {
     @Override
     public Class<DummyAnn> support() {
         return DummyAnn.class;
@@ -16,12 +16,12 @@ public class DummyStrategySync implements ResiliXStrategySync<DummyAnn, Object, 
     }
 
     @Override
-    public Object createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
+    public DummyConfigModel createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 
     @Override
-    public Object computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
+    public DummyCacheModel computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 

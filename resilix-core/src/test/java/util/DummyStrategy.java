@@ -3,7 +3,7 @@ package util;
 import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategy;
 
-public class DummyStrategy implements ResiliXStrategy<DummyAnn, Object, Object> {
+public class DummyStrategy implements ResiliXStrategy<DummyAnn, DummyConfigModel, DummyCacheModel> {
     @Override
     public Class<DummyAnn> support() {
         return null;
@@ -15,12 +15,12 @@ public class DummyStrategy implements ResiliXStrategy<DummyAnn, Object, Object> 
     }
 
     @Override
-    public Object createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
+    public DummyConfigModel createConfiguration(DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 
     @Override
-    public Object computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
+    public DummyCacheModel computeCache(String key, DummyAnn annotation, ResiliXContext ctx) {
         return null;
     }
 

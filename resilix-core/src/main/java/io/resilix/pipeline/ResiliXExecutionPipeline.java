@@ -1,6 +1,8 @@
 package io.resilix.pipeline;
 
 import io.github.resilience4j.core.functions.CheckedSupplier;
+import io.resilix.model.ResiliXCacheModel;
+import io.resilix.model.ResiliXConfigModel;
 import io.resilix.model.ResiliXContext;
 import org.aspectj.lang.ProceedingJoinPoint;
 
@@ -12,7 +14,8 @@ import static io.resilix.util.ResiliXUtils.isAsync;
 import static io.resilix.util.ResiliXUtils.proceedSupplier;
 import static io.resilix.util.ResiliXUtils.wrapAsync;
 
-public record ResiliXExecutionPipeline<A extends Annotation, C, K>(ResiliXStrategyPipeline<A, C, K> strategy) {
+public record ResiliXExecutionPipeline<A extends Annotation, C extends ResiliXConfigModel, K extends ResiliXCacheModel<C>>(
+        ResiliXStrategyPipeline<A, C, K> strategy) {
 
     public Object execute(ProceedingJoinPoint pjp, ResiliXContext ctx) throws Throwable {
         strategy.onEnter(ctx);

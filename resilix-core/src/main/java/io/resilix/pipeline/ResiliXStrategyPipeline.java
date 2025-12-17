@@ -1,6 +1,8 @@
 package io.resilix.pipeline;
 
 import io.github.resilience4j.core.functions.CheckedSupplier;
+import io.resilix.model.ResiliXCacheModel;
+import io.resilix.model.ResiliXConfigModel;
 import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategy;
 import io.resilix.strategy.ResiliXStrategyAsync;
@@ -13,7 +15,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 @RequiredArgsConstructor
-class ResiliXStrategyPipeline<A extends Annotation, C, K> implements ResiliXStrategySync<A, C, K>, ResiliXStrategyAsync<A, C, K> {
+class ResiliXStrategyPipeline<A extends Annotation, C extends ResiliXConfigModel, K extends ResiliXCacheModel<C>> implements ResiliXStrategySync<A, C, K>, ResiliXStrategyAsync<A, C, K> {
 
     private final List<ResiliXStrategy<A, C, K>> strategies;
 

@@ -17,7 +17,6 @@ class XircuitBConfigRegistryTest {
 
         XircuitBConfigModel first = createXircuitBConfigModel();
         XircuitBConfigModel second = createXircuitBConfigModel();
-        second.setSlidingWindowSize(1);
 
         registry.register("test", first);
         registry.register("test", second);

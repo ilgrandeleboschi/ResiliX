@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import util.Dummy;
 import util.DummyAnn;
+import util.DummyCacheModel;
+import util.DummyConfigModel;
 import util.DummyStrategyAsync;
 import util.DummyStrategySync;
 
@@ -21,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 class ResiliXAspectTest {
 
-    private ResiliXAspect<DummyAnn, Object, Object> aspect;
+    private ResiliXAspect<DummyAnn, DummyConfigModel, DummyCacheModel> aspect;
 
     @BeforeEach
     void setUp() {

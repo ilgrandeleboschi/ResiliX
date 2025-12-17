@@ -1,6 +1,8 @@
 package io.resilix.pipeline;
 
 import io.resilix.model.MethodKey;
+import io.resilix.model.ResiliXCacheModel;
+import io.resilix.model.ResiliXConfigModel;
 import io.resilix.model.ResiliXContext;
 import io.resilix.strategy.ResiliXStrategy;
 import io.resilix.strategy.ResiliXStrategyAsync;
@@ -24,7 +26,7 @@ import static io.resilix.util.ResiliXUtils.isAsync;
 @Aspect
 @Component
 @RequiredArgsConstructor
-public class ResiliXAspect<A extends Annotation, C, K> {
+public class ResiliXAspect<A extends Annotation, C extends ResiliXConfigModel, K extends ResiliXCacheModel<C>> {
 
     private final List<ResiliXStrategy<A, C, K>> allStrategies;
     private final Map<MethodKey, List<ResiliXStrategy<A, C, K>>> cache = new ConcurrentHashMap<>();
