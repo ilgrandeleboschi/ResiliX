@@ -4,6 +4,7 @@ import io.xircuitb.exception.XircuitBConfigurationException;
 import io.xircuitb.model.XircuitBConfigModel;
 import org.junit.jupiter.api.Test;
 
+import static io.xircuitb.model.SlidingWindowType.COUNT_BASED;
 import static io.xircuitb.validator.XircuitBValidator.validateParameters;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +21,6 @@ class XircuitBValidatorTest {
     @Test
     void validateParameters_invalidEnumValue_throw() {
         XircuitBConfigModel config = XircuitBConfigModel.builder()
-                .slidingWindowType("INVALID_TYPE")
                 .waitDurationInOpenState(1)
                 .build();
 
@@ -29,13 +29,13 @@ class XircuitBValidatorTest {
                 () -> validateParameters(config)
         );
 
-        assertEquals("SlidingWindowType is not valid: INVALID_TYPE", ex.getMessage());
+        assertEquals("slidingWindowType must not be null", ex.getMessage());
     }
 
     @Test
     void validateParameters_waitDurationNegative_throw() {
         XircuitBConfigModel config = XircuitBConfigModel.builder()
-                .slidingWindowType("COUNT_BASED")
+                .slidingWindowType(COUNT_BASED)
                 .waitDurationInOpenState(-1)
                 .build();
 
@@ -50,7 +50,7 @@ class XircuitBValidatorTest {
     @Test
     void validateParameters_slidingWindowSizeNegative_throw() {
         XircuitBConfigModel config = XircuitBConfigModel.builder()
-                .slidingWindowType("COUNT_BASED")
+                .slidingWindowType(COUNT_BASED)
                 .waitDurationInOpenState(1000)
                 .numCallHalfOpen(10)
                 .failureRateThreshold(10)
@@ -68,7 +68,7 @@ class XircuitBValidatorTest {
     @Test
     void validateParameters_failureRateThresholdNegative_throw() {
         XircuitBConfigModel config = XircuitBConfigModel.builder()
-                .slidingWindowType("COUNT_BASED")
+                .slidingWindowType(COUNT_BASED)
                 .waitDurationInOpenState(1000)
                 .minNumberOfCalls(1)
                 .numCallHalfOpen(10)

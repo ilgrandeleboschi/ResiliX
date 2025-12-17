@@ -12,7 +12,7 @@ xb-def-template:
   activeTo: ${XB_DEF_TEMPLATE_ACTIVE_TO}
   activeDays: ${XB_DEF_TEMPLATE_ACTIVE_DAYS}
 #xircuitb:
-#  default:
+#  myCustomXB:
 #    slidingWindowSize:
 #    minNumberOfCalls:
 #    failureRateThreshold:

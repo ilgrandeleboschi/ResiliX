@@ -11,7 +11,7 @@ import lombok.Setter;
 @Builder
 public class XircuitBConfigModel {
 
-    private String slidingWindowType;
+    private SlidingWindowType slidingWindowType;
     private int slidingWindowSize;
     private float failureRateThreshold;
     private int minNumberOfCalls;

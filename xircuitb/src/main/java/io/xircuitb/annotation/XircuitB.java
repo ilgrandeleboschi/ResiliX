@@ -1,5 +1,6 @@
 package io.xircuitb.annotation;
 
+import io.xircuitb.model.SlidingWindowType;
 import io.xircuitb.provider.XircuitBConfigProvider;
 import io.xircuitb.provider.XircuitBFallbackProvider;
 import io.xircuitb.provider.defaults.VoidXircuitBConfigProvider;
@@ -12,6 +13,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.time.DayOfWeek;
 
+import static io.xircuitb.model.SlidingWindowType.COUNT_BASED;
+
 @Target(ElementType.METHOD)
 @Repeatable(XircuitBs.class)
 @Retention(RetentionPolicy.RUNTIME)
@@ -19,7 +22,7 @@ public @interface XircuitB {
 
     String name() default "";
 
-    String slidingWindowType() default "COUNT_BASED";
+    SlidingWindowType slidingWindowType() default COUNT_BASED;
 
     int slidingWindowSize() default -1;
 

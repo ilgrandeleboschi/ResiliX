@@ -35,7 +35,6 @@ import static io.resilix.validator.ResiliXValidator.getBean;
 import static io.resilix.validator.ResiliXValidator.validateAndConvertClass;
 import static io.resilix.validator.ResiliXValidator.validateAndConvertDays;
 import static io.resilix.validator.ResiliXValidator.validateAndConvertExceptions;
-import static org.apache.logging.log4j.util.Strings.isNotBlank;
 
 @Slf4j
 @Component
@@ -119,7 +118,7 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
     public XircuitBConfigModel merge(XircuitBConfigModel base, XircuitBConfigModel override) {
         if (override == null) return base;
         return XircuitBConfigModel.builder()
-                .slidingWindowType(isNotBlank(override.getSlidingWindowType()) ? override.getSlidingWindowType() : base.getSlidingWindowType())
+                .slidingWindowType(override.getSlidingWindowType() != null ? override.getSlidingWindowType() : base.getSlidingWindowType())
                 .slidingWindowSize(override.getSlidingWindowSize() > 0 ? override.getSlidingWindowSize() : base.getSlidingWindowSize())
                 .failureRateThreshold(override.getFailureRateThreshold() > 0 ? override.getFailureRateThreshold() : base.getFailureRateThreshold())
                 .minNumberOfCalls(override.getMinNumberOfCalls() > 0 ? override.getMinNumberOfCalls() : base.getMinNumberOfCalls())
@@ -142,7 +141,7 @@ public class XircuitBConfigFactory implements ResiliXConfigFactory<XircuitB, Xir
                         .failureRateThreshold(cfg.getFailureRateThreshold())
                         .minimumNumberOfCalls(cfg.getMinNumberOfCalls())
                         .permittedNumberOfCallsInHalfOpenState(cfg.getNumCallHalfOpen())
-                        .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.valueOf(cfg.getSlidingWindowType()))
+                        .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.valueOf(cfg.getSlidingWindowType().name()))
                         .waitDurationInOpenState(Duration.ofMillis(cfg.getWaitDurationInOpenState()))
                         .recordExceptions(cfg.getExceptionsToCatch())
                         .clock(clock)

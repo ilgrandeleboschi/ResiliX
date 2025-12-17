@@ -38,7 +38,6 @@ import static util.XircuitBMockBuilder.FIXED_CLOCK;
 import static util.XircuitBMockBuilder.createResiliXContext;
 import static util.XircuitBMockBuilder.createXircuitBConfigModel;
 import static util.XircuitBMockBuilder.createXircuitBConfigModelWithAsyncFallback;
-import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBStrategyProviderAsyncTest {
@@ -99,7 +98,7 @@ class XircuitBStrategyProviderAsyncTest {
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModelWithAsyncFallback(), defaultResiliXContext());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModelWithAsyncFallback());
         doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         when(cb.executeCompletionStage(any())).thenReturn(CompletableFuture.failedFuture(mock(CallNotPermittedException.class)));
@@ -117,7 +116,7 @@ class XircuitBStrategyProviderAsyncTest {
 
         XircuitBStrategyProviderAsync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), defaultResiliXContext());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
         doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         Exception e = new Exception("Regular exception");

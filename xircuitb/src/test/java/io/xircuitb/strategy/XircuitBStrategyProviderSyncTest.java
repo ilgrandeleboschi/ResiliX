@@ -37,7 +37,6 @@ import static org.mockito.Mockito.when;
 import static util.XircuitBMockBuilder.FIXED_CLOCK;
 import static util.XircuitBMockBuilder.createResiliXContext;
 import static util.XircuitBMockBuilder.createXircuitBConfigModel;
-import static util.XircuitBMockBuilder.defaultResiliXContext;
 
 @ExtendWith(MockitoExtension.class)
 class XircuitBStrategyProviderSyncTest {
@@ -109,7 +108,7 @@ class XircuitBStrategyProviderSyncTest {
 
         XircuitBStrategyProviderSync spy = spy(strategy);
         CircuitBreaker cb = mock(CircuitBreaker.class);
-        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel(), defaultResiliXContext());
+        XircuitBCacheModel cache = new XircuitBCacheModel(cb, createXircuitBConfigModel());
         doReturn(cache).when(spy).computeCache(anyString(), any(), any());
 
         when(cb.executeCheckedSupplier(any())).thenThrow(CallNotPermittedException.class);

@@ -4,7 +4,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.resilix.exception.ResiliXException;
 import io.resilix.model.ResiliXContext;
 import io.xircuitb.annotation.XircuitB;
-import io.xircuitb.config.XircuitBDefaultConfig;
 import io.xircuitb.config.XircuitBYMLConfig;
 import io.xircuitb.config.XircuitBsYMLConfig;
 import io.xircuitb.exception.XircuitBConfigurationException;
@@ -53,8 +52,6 @@ class XircuitBConfigFactoryTest {
     XircuitBConfigRegistry configRegistry;
     @Mock
     XircuitBFallbackRegistry fallbackRegistry;
-    @Mock
-    XircuitBDefaultConfig defaultConfig;
     @InjectMocks
     XircuitBConfigFactory configFactory;
 
@@ -114,6 +111,10 @@ class XircuitBConfigFactoryTest {
     @Test
     void resolveConfig_defineExceptionsAndActiveDayInline() throws NoSuchMethodException, ResiliXException {
         XircuitB xb = Fixture.SimpleXb.class.getMethod("exceptionsAndActiveDaysInline").getAnnotation(XircuitB.class);
+        Map<String, XircuitBYMLConfig> xircuitbMap = new HashMap<>();
+        XircuitBYMLConfig xircuitBYMLConfig = createXircuitBYMLConfig();
+        xircuitbMap.put("", xircuitBYMLConfig);
+        when(defaultConf.getXircuitb()).thenReturn(xircuitbMap);
         XircuitBConfigModel actual = configFactory.resolveConfig(xb, ctx);
 
         assertEquals(1, actual.getActiveSchedule().periods().getFirst().activeDays().size());
@@ -142,7 +143,7 @@ class XircuitBConfigFactoryTest {
 
         assertEquals(50, config.getFailureRateThreshold());
         assertEquals(100, config.getSlidingWindowSize());
-        assertEquals("COUNT_BASED", config.getSlidingWindowType());
+        assertEquals(COUNT_BASED.name(), config.getSlidingWindowType().name());
         assertEquals(10, config.getNumCallHalfOpen());
     }
 

@@ -17,6 +17,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static io.xircuitb.model.SlidingWindowType.COUNT_BASED;
+
 @UtilityClass
 public class XircuitBMockBuilder {
 
@@ -27,7 +29,7 @@ public class XircuitBMockBuilder {
 
     public static XircuitBConfigModel createXircuitBConfigModel() {
         return XircuitBConfigModel.builder()
-                .slidingWindowType("COUNT_BASED")
+                .slidingWindowType(COUNT_BASED)
                 .waitDurationInOpenState(1)
                 .failureRateThreshold(50)
                 .slidingWindowSize(100)
@@ -40,7 +42,7 @@ public class XircuitBMockBuilder {
 
     public static XircuitBConfigModel createXircuitBConfigModelWithAsyncFallback() {
         return XircuitBConfigModel.builder()
-                .slidingWindowType("COUNT_BASED")
+                .slidingWindowType(COUNT_BASED)
                 .waitDurationInOpenState(1)
                 .failureRateThreshold(50)
                 .slidingWindowSize(100)
@@ -54,7 +56,7 @@ public class XircuitBMockBuilder {
     public static XircuitBYMLConfig createXircuitBYMLConfig() {
         XircuitBYMLConfig xircuitBYMLConfig = new XircuitBYMLConfig();
         xircuitBYMLConfig.setSlidingWindowSize(100);
-        xircuitBYMLConfig.setSlidingWindowType("COUNT_BASED");
+        xircuitBYMLConfig.setSlidingWindowType(COUNT_BASED);
         xircuitBYMLConfig.setActiveFrom("09:00");
         xircuitBYMLConfig.setActiveTo("19:00");
         xircuitBYMLConfig.setExceptionsToCatch(new String[]{"java.lang.Exception"});

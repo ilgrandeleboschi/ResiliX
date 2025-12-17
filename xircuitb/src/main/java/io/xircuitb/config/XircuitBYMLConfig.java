@@ -1,16 +1,19 @@
 package io.xircuitb.config;
 
 import io.xircuitb.model.ActivePeriodConfig;
+import io.xircuitb.model.SlidingWindowType;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
 
+import static io.xircuitb.model.SlidingWindowType.COUNT_BASED;
+
 @Getter
 @Setter
 public class XircuitBYMLConfig {
 
-    private String slidingWindowType = "COUNT_BASED";
+    private SlidingWindowType slidingWindowType = COUNT_BASED;
     private int slidingWindowSize = 100;
     private float failureRateThreshold = 50;
     private int minNumberOfCalls = 10;

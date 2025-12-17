@@ -54,7 +54,7 @@ public class XircuitBStrategyProvider implements ResiliXStrategy<XircuitB, Xircu
         return xbCache.computeIfAbsent(xbName, name -> {
             XircuitBConfigModel config = createConfiguration(xb, ctx);
             CircuitBreaker cb = createCircuitBreaker(config, name);
-            return cb == null ? null : new XircuitBCacheModel(cb, config, ctx);
+            return cb == null ? null : new XircuitBCacheModel(cb, config);
         });
     }
 
