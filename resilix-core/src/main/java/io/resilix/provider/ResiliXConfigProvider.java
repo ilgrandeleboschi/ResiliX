@@ -1,13 +1,15 @@
 package io.resilix.provider;
 
+import io.resilix.model.ResiliXConfigModel;
+
 /**
  * Internal base interface for config providers.
  * Do not implement directly. Implement only the module version of it.
  */
-public interface ResiliXConfigProvider<T> {
+public interface ResiliXConfigProvider<C extends ResiliXConfigModel> {
 
     String name();
 
-    T get();
+    C get();
 
 }
